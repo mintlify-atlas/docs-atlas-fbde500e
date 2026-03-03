@@ -1,0 +1,349 @@
+---
+title: "Config Command"
+description: "Manage Aceplay configuration settings"
+icon: "gear"
+---
+
+The `config` command provides tools to view, edit, and manage your Aceplay configuration. Settings are stored in `~/.config/aceplay/config.yaml`.
+
+## Syntax
+
+```bash
+aceplay config [subcommand]
+```
+
+When run without a subcommand, it opens an interactive configuration menu (if running in a terminal).
+
+## Subcommands
+
+### show
+
+Display your current configuration settings.
+
+```bash
+aceplay config show
+```
+
+**Example output:**
+```
+Aceplay Configuration
+
+Player:     mpv
+Engine:     localhost:6878
+Timeout:    1m0s
+HLS:        false
+Verbose:    false
+```
+
+### set
+
+Set a specific configuration value.
+
+```bash
+aceplay config set [key] [value]
+```
+
+**Arguments:**
+- `key` - The configuration key to set
+- `value` - The new value
+
+**Example:**
+```bash
+aceplay config set player vlc
+```
+
+### edit
+
+Open an interactive configuration editor (TUI).
+
+```bash
+aceplay config edit
+```
+
+This launches a terminal user interface where you can configure all settings interactively. See [Interactive Mode](/usage/interactive-mode) for details.
+
+## Configuration Keys
+
+The following keys can be used with `aceplay config set`:
+
+<ParamField path="player" type="string" default="mpv">
+  Default video player for playback.
+  
+  **Supported values:** `mpv`, `vlc`, `ffplay`
+  
+  Example:
+  ```bash
+  aceplay config set player vlc
+  ```
+</ParamField>
+
+<ParamField path="engine.host" type="string" default="localhost">
+  Hostname or IP address of acestream-engine.
+  
+  Example:
+  ```bash
+  aceplay config set engine.host 192.168.1.100
+  ```
+</ParamField>
+
+<ParamField path="engine.port" type="integer" default="6878">
+  Port number for acestream-engine HTTP API.
+  
+  Example:
+  ```bash
+  aceplay config set engine.port 8080
+  ```
+</ParamField>
+
+<ParamField path="timeout" type="duration" default="60s">
+  Default timeout for stream startup.
+  
+  Accepts duration strings like `30s`, `1m`, `2m30s`.
+  
+  Example:
+  ```bash
+  aceplay config set timeout 2m
+  ```
+</ParamField>
+
+<ParamField path="hls" type="boolean" default="false">
+  Enable HLS mode by default.
+  
+  **Accepted values:** `true`, `false`
+  
+  Example:
+  ```bash
+  aceplay config set hls true
+  ```
+</ParamField>
+
+<ParamField path="verbose" type="boolean" default="false">
+  Enable verbose logging by default.
+  
+  **Accepted values:** `true`, `false`
+  
+  Example:
+  ```bash
+  aceplay config set verbose true
+  ```
+</ParamField>
+
+## Usage Examples
+
+### View Current Configuration
+
+```bash
+aceplay config show
+```
+
+### Change Default Player
+
+```bash
+aceplay config set player mpv
+```
+
+```bash
+aceplay config set player vlc
+```
+
+```bash
+aceplay config set player ffplay
+```
+
+### Configure Remote Engine
+
+Set up connection to acestream-engine on another machine:
+
+```bash
+aceplay config set engine.host 192.168.1.100
+aceplay config set engine.port 6878
+```
+
+### Adjust Default Timeout
+
+```bash
+aceplay config set timeout 5m
+```
+
+### Enable HLS by Default
+
+```bash
+aceplay config set hls true
+```
+
+### Enable Verbose Logging
+
+```bash
+aceplay config set verbose true
+```
+
+### Multiple Settings
+
+You can set multiple values in sequence:
+
+```bash
+aceplay config set player mpv
+aceplay config set timeout 2m
+aceplay config set hls true
+```
+
+### Use Interactive Editor
+
+For a more user-friendly experience, use the interactive editor:
+
+```bash
+aceplay config edit
+```
+
+## Interactive Menu
+
+Running `aceplay config` without arguments (in a terminal) opens an interactive menu:
+
+```
+⚙️  Aceplay Configuration
+
+Current Settings:
+  🎬 Player:    mpv
+  🔌 Engine:    localhost:6878
+  ⏱️  Timeout:   1m0s
+  📺 HLS:       ✗ No
+  📝 Verbose:   ✗ No
+
+What would you like to do?
+  ✏️  Edit all settings
+  🎬 Change player
+  🔌 Change engine host/port
+  ⏱️  Change timeout
+  📺 Toggle HLS
+  ❌ Exit
+```
+
+<Note>
+The interactive menu is only available when running in a terminal. In non-interactive environments (scripts, CI/CD), use `aceplay config show` or `aceplay config set`.
+</Note>
+
+## Configuration File
+
+Configuration is stored in YAML format at:
+
+```
+~/.config/aceplay/config.yaml
+```
+
+Or if `XDG_CONFIG_HOME` is set:
+
+```
+$XDG_CONFIG_HOME/aceplay/config.yaml
+```
+
+**Example config.yaml:**
+
+```yaml
+player: mpv
+engine:
+  host: localhost
+  port: 6878
+  auto_start: false
+  auto_start_command: ""
+timeout: 1m0s
+connect_timeout: 5s
+hls: false
+verbose: false
+```
+
+<Tip>
+While you can edit the configuration file directly, it's recommended to use `aceplay config set` or `aceplay config edit` to ensure valid values.
+</Tip>
+
+## Environment Variables
+
+You can override configuration values using environment variables with the `ACEPLAY_` prefix:
+
+```bash
+# Override player
+ACEPLAY_PLAYER=vlc aceplay play acestream://...
+
+# Override engine host
+ACEPLAY_ENGINE_HOST=192.168.1.100 aceplay play acestream://...
+
+# Override timeout
+ACEPLAY_TIMEOUT=5m aceplay play acestream://...
+```
+
+<Note>
+Environment variables take precedence over the configuration file, but command-line flags take precedence over everything.
+</Note>
+
+## First Run Setup
+
+On first run, if no configuration exists, Aceplay will launch a setup wizard to help you configure the basics:
+
+```bash
+aceplay
+```
+
+This wizard will:
+1. Detect available video players on your system
+2. Let you select your preferred player
+3. Configure HLS mode preference
+4. Save your initial configuration
+
+See [Interactive Mode](/usage/interactive-mode) for details on the setup wizard.
+
+## Configuration Precedence
+
+Settings are applied in this order (later values override earlier ones):
+
+1. **Default values** (hardcoded in Aceplay)
+2. **Configuration file** (`~/.config/aceplay/config.yaml`)
+3. **Environment variables** (`ACEPLAY_*`)
+4. **Command-line flags** (`--player`, `--timeout`, etc.)
+
+Example:
+```bash
+# Config file has: player: mpv
+# This command uses vlc instead:
+aceplay play acestream://... --player vlc
+```
+
+## Resetting Configuration
+
+To reset to default settings, simply delete the configuration file:
+
+```bash
+rm ~/.config/aceplay/config.yaml
+```
+
+Next time you run Aceplay, the setup wizard will run again.
+
+## Troubleshooting
+
+### Configuration not saved
+
+Ensure the configuration directory exists and is writable:
+
+```bash
+ls -la ~/.config/aceplay
+```
+
+If it doesn't exist, create it:
+
+```bash
+mkdir -p ~/.config/aceplay
+```
+
+### Invalid configuration value
+
+If you set an invalid value, Aceplay will show an error:
+
+```bash
+aceplay config set engine.port invalid
+# Error: invalid port: ...
+```
+
+Check the valid values for each key in the [Configuration Keys](#configuration-keys) section.
+
+## Related Commands
+
+- [Play Command](/usage/play-command) - Play streams with custom flags
+- [Interactive Mode](/usage/interactive-mode) - Visual configuration editor

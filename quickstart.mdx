@@ -1,80 +1,271 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Play your first Ace Stream in under 60 seconds
 ---
 
-## Get started in three steps
+This guide will get you streaming with Aceplay in just a few steps. Make sure you've already [installed Aceplay](/installation) before continuing.
 
-Get your documentation site running locally and make your first customization.
+## Play your first stream
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Ensure you have a video player">
+    Aceplay works with mpv, vlc, or ffplay. Check if you have one installed:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash
+    which mpv vlc ffplay
+    ```
 
-### Step 2: Deploy your changes
+    If none are installed, install mpv (recommended):
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <CodeGroup>
+    ```bash Debian/Ubuntu
+    sudo apt install mpv
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash Fedora
+    sudo dnf install mpv
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash Arch Linux
+    sudo pacman -S mpv
+    ```
+    </CodeGroup>
+  </Step>
 
-### Step 3: Go live
+  <Step title="Run the setup wizard (first time only)">
+    On first run, Aceplay will launch an interactive setup wizard to configure your preferences:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ```bash
+    aceplay
+    ```
+
+    The wizard will ask you to:
+    - Select your preferred video player
+    - Choose whether to use HLS mode
+
+    Your configuration will be saved to `~/.config/aceplay/config.yaml`.
+  </Step>
+
+  <Step title="Play a stream">
+    Now you're ready to play an Ace Stream! Use the `play` command or pass the URL directly:
+
+    ```bash
+    aceplay acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+    ```
+
+    Or explicitly use the `play` subcommand:
+
+    ```bash
+    aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+    ```
+
+    Aceplay will:
+    1. Parse the content ID from the URL
+    2. Check if acestream-engine is running (and start it if needed)
+    3. Request the stream from the engine
+    4. Wait for the stream to be ready
+    5. Launch your configured video player
+  </Step>
+
+  <Step title="Watch stream statistics">
+    While streaming, Aceplay displays real-time statistics in your terminal:
+
+    ```
+    ✓ Stream ready! Playing...
+      URL: http://localhost:6878/ace/manifest.m3u8?...
+
+    Status: dl | ⬇ 2.4 MB/s | ⬆ 156 KB/s | Peers: 47
+    ```
+
+    The status line shows:
+    - **Status** - Current stream state (dl = downloading, prebuf = prebuffering)
+    - **Download speed** - Incoming data rate
+    - **Upload speed** - Outgoing data rate (P2P sharing)
+    - **Peers** - Number of connected peers
+  </Step>
+</Steps>
+
+## Basic usage examples
+
+### Play with a specific player
+
+Override your configured player for a single stream:
+
+```bash
+aceplay acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --player vlc
+```
+
+### Use HLS mode
+
+Enable HLS streaming (recommended for better compatibility):
+
+```bash
+aceplay acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --hls
+```
+
+### Verbose output
+
+See detailed logging information:
+
+```bash
+aceplay acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --verbose
+```
+
+### Just the content ID
+
+You can also pass just the content ID without the `acestream://` prefix:
+
+```bash
+aceplay 94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+## Configure your preferences
+
+After the initial setup, you can change settings using the interactive configuration menu:
+
+```bash
+aceplay config
+```
+
+Or edit settings directly:
+
+```bash
+# Set default player
+aceplay config set player mpv
+
+# Set engine host (if running remotely)
+aceplay config set engine.host 192.168.1.100
+
+# Set timeout
+aceplay config set timeout 90s
+
+# Enable HLS by default
+aceplay config set hls true
+```
+
+### View current configuration
+
+See your current settings:
+
+```bash
+aceplay config show
+```
+
+Output:
+
+```
+Aceplay Configuration
+
+Player:     mpv
+Engine:     localhost:6878
+Timeout:    60s
+HLS:        false
+Verbose:    false
+```
+
+### Configuration file location
+
+Your configuration is stored at:
+
+```
+~/.config/aceplay/config.yaml
+```
+
+You can edit this file directly if preferred:
+
+```yaml
+player: mpv
+engine:
+  host: localhost
+  port: 6878
+timeout: 60s
+hls: false
+verbose: false
+```
+
+## Browser integration
+
+To open acestream:// links directly from your browser:
+
+```bash
+aceplay register-protocol
+```
+
+After running this command, clicking an acestream:// link in your browser will automatically open Aceplay and start playback.
+
+The protocol handler is registered at `~/.local/share/applications/aceplay.desktop`.
+
+## Understanding stream states
+
+During playback, you'll see different stream states:
+
+| Status | Description |
+|--------|-------------|
+| `prebuf` | Prebuffering - building up initial buffer |
+| `dl` | Downloading - actively streaming content |
+| `check` | Checking - verifying stream availability |
+| `wait` | Waiting - waiting for peers or data |
+| `idle` | Idle - stream is ready but not active |
+| `loading` | Loading - initializing stream |
+| `error` | Error - stream encountered a problem |
+
+## Troubleshooting
+
+### acestream-engine not starting
+
+If the engine fails to start automatically:
+
+1. Check if acestream-engine is installed:
+   ```bash
+   which acestreamengine
+   ```
+
+2. Try starting it manually:
+   ```bash
+   acestreamengine --client-console
+   ```
+
+3. Check if it's running:
+   ```bash
+   curl http://localhost:6878/
+   ```
+
+### Stream timeout
+
+If streams timeout frequently, increase the timeout value:
+
+```bash
+aceplay config set timeout 120s
+```
+
+### Player doesn't start
+
+Verify your player is properly installed and in your PATH:
+
+```bash
+which mpv
+mpv --version
+```
+
+If using a different player, make sure it's configured:
+
+```bash
+aceplay config set player vlc
+```
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Configuration guide" icon="gear" href="/configuration/config-file">
+    Learn about all configuration options
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/usage/play-command">
+    Complete command-line reference
+  </Card>
+  <Card title="Player settings" icon="play" href="/configuration/player-setup">
+    Customize player arguments and behavior
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/advanced/troubleshooting">
+    Common issues and solutions
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

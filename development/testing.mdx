@@ -1,0 +1,397 @@
+---
+title: Testing
+description: Running tests and ensuring code quality in Aceplay
+---
+
+Aceplay uses Go's built-in testing framework along with Testify for assertions. This guide covers running tests, generating coverage reports, and maintaining code quality.
+
+## Running Tests
+
+### All Tests
+
+Run the complete test suite with race detection:
+
+```bash
+make test
+```
+
+This executes:
+```bash
+go test -v -race ./...
+```
+
+**Flags:**
+- `-v` - Verbose output showing each test
+- `-race` - Enables race detector to catch concurrency issues
+- `./...` - Runs tests in all packages recursively
+
+### Short Tests
+
+Run only quick tests, skipping slow integration tests:
+
+```bash
+make test-short
+```
+
+Executes:
+```bash
+go test -v -short ./...
+```
+
+Use this for rapid feedback during development.
+
+### Specific Package
+
+Test a single package:
+
+```bash
+go test -v ./internal/config
+```
+
+Or with the full path:
+```bash
+go test -v ./internal/config/...
+```
+
+### Specific Test Function
+
+Run a single test by name:
+
+```bash
+go test -v -run TestFunctionName ./internal/acestream
+```
+
+Example:
+```bash
+go test -v -run TestParseURL ./pkg/acestream
+```
+
+Use regex patterns:
+```bash
+# Run all tests starting with TestConfig
+go test -v -run "^TestConfig" ./internal/config
+```
+
+## Test Coverage
+
+### Generate Coverage Report
+
+Run tests with coverage analysis:
+
+```bash
+make test-coverage
+```
+
+This:
+1. Runs tests with race detection
+2. Generates `coverage.out` profile
+3. Creates `coverage.html` for browser viewing
+
+**Commands executed:**
+```bash
+go test -race -coverprofile=coverage.out -covermode=atomic ./...
+go tool cover -html=coverage.out -o coverage.html
+```
+
+### View Coverage in Browser
+
+After running `make test-coverage`:
+
+```bash
+xdg-open coverage.html  # Linux
+open coverage.html      # macOS
+```
+
+### Coverage for Specific Package
+
+```bash
+go test -race -coverprofile=coverage.out ./internal/config
+go tool cover -html=coverage.out
+```
+
+### Terminal Coverage Summary
+
+```bash
+go test -cover ./...
+```
+
+Shows coverage percentage for each package.
+
+## Code Quality Checks
+
+### Format Code
+
+Automatically format all Go code:
+
+```bash
+make fmt
+```
+
+Runs:
+```bash
+go fmt ./...
+```
+
+This ensures consistent formatting across the codebase.
+
+### Static Analysis
+
+Run Go's built-in static analyzer:
+
+```bash
+make vet
+```
+
+Executes:
+```bash
+go vet ./...
+```
+
+Detects:
+- Suspicious constructs
+- Common mistakes
+- Potential bugs
+- Unreachable code
+
+### Lint Code
+
+Run the comprehensive linter:
+
+```bash
+make lint
+```
+
+Uses [golangci-lint](https://golangci-lint.run/) to check:
+- Code style violations
+- Best practice violations
+- Performance issues
+- Security concerns
+
+**Install golangci-lint:**
+```bash
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+```
+
+### Run All Checks
+
+Run all code quality checks before committing:
+
+```bash
+make check
+```
+
+This runs in sequence:
+1. `make fmt` - Format code
+2. `make vet` - Static analysis
+3. `make lint` - Linting
+4. `make test` - Full test suite
+
+<Warning>
+Always run `make check` before creating a pull request to ensure your changes meet quality standards.
+</Warning>
+
+## Writing Tests
+
+### Test File Naming
+
+Follow Go conventions:
+- Test file: `module_test.go`
+- Same package as code being tested
+- Place alongside source files
+
+Example:
+```
+internal/config/
+├── config.go
+└── config_test.go
+```
+
+### Using Testify
+
+Aceplay uses [Testify](https://github.com/stretchr/testify) for assertions:
+
+```go
+import (
+    "testing"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
+)
+
+func TestConfigLoad(t *testing.T) {
+    cfg, err := LoadConfig("testdata/config.yaml")
+    require.NoError(t, err)  // Fail immediately if error
+    assert.Equal(t, "mpv", cfg.Player)
+    assert.NotNil(t, cfg.Engine)
+}
+```
+
+**When to use:**
+- `require.*` - Test should fail immediately if assertion fails
+- `assert.*` - Continue running other assertions
+
+### Table-Driven Tests
+
+Preferred pattern for testing multiple cases:
+
+```go
+func TestParseURL(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   string
+        wantID  string
+        wantErr bool
+    }{
+        {
+            name:    "valid acestream URL",
+            input:   "acestream://abcd1234",
+            wantID:  "abcd1234",
+            wantErr: false,
+        },
+        {
+            name:    "invalid protocol",
+            input:   "http://example.com",
+            wantID:  "",
+            wantErr: true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            id, err := ParseURL(tt.input)
+            if tt.wantErr {
+                assert.Error(t, err)
+            } else {
+                assert.NoError(t, err)
+                assert.Equal(t, tt.wantID, id)
+            }
+        })
+    }
+}
+```
+
+### Test Helpers
+
+Create helper functions for common test setup:
+
+```go
+func setupTestConfig(t *testing.T) *Config {
+    t.Helper()  // Mark as helper
+    cfg := NewConfig()
+    cfg.Player = "mpv"
+    return cfg
+}
+
+func TestSomething(t *testing.T) {
+    cfg := setupTestConfig(t)
+    // Use cfg in test
+}
+```
+
+## Testing Guidelines from AGENTS.md
+
+Key principles from the development guide:
+
+### Test Structure
+
+- Use table-driven tests for multiple test cases
+- Test file naming: `module_test.go`
+- Use `testify` assertions (`assert`, `require`)
+
+### Naming Conventions
+
+```go
+func TestFunctionName(t *testing.T) {  // Test function
+    tests := []struct {                 // Table-driven
+        name    string                   // Test case name
+        input   string
+        want    string
+    }{
+        {"case 1", "input1", "expected1"},
+        {"case 2", "input2", "expected2"},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := MyFunction(tt.input)
+            assert.Equal(t, tt.want, result)
+        })
+    }
+}
+```
+
+### Error Handling in Tests
+
+```go
+// Good - explicit error checking
+result, err := Function()
+if err != nil {
+    t.Fatalf("unexpected error: %v", err)
+}
+
+// Better - with testify
+result, err := Function()
+require.NoError(t, err)
+assert.Equal(t, expected, result)
+```
+
+## Continuous Integration
+
+Prepare for CI pipeline:
+
+```bash
+make ci
+```
+
+Runs:
+```bash
+make deps fmt vet test
+```
+
+This ensures:
+1. Dependencies are downloaded
+2. Code is formatted
+3. Static analysis passes
+4. All tests pass
+
+## Troubleshooting
+
+### Race Detector Failures
+
+If you see race condition warnings:
+```
+WARNING: DATA RACE
+```
+
+Fix the concurrency issue. Never ignore race warnings.
+
+### Test Timeout
+
+For slow tests, increase timeout:
+```bash
+go test -timeout 5m ./...
+```
+
+### Flaky Tests
+
+If tests fail intermittently:
+1. Check for race conditions (`-race` flag)
+2. Look for timing dependencies
+3. Ensure proper cleanup in `defer` or `t.Cleanup()`
+
+### Coverage Too Low
+
+Aim for reasonable coverage:
+- Critical paths: 80%+ coverage
+- Utilities: 70%+ coverage
+- UI components: Best effort
+
+Add tests for:
+- Error conditions
+- Edge cases
+- Common usage patterns
+
+## Next Steps
+
+<Card title="Contributing Guidelines" icon="code-pull-request" href="/development/contributing">
+  Learn the full contribution workflow including code style and pull request process
+</Card>

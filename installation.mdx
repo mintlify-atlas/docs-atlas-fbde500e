@@ -1,0 +1,245 @@
+---
+title: Installation
+description: Install Aceplay on your Linux system using AUR, package managers, or from source
+---
+
+<Note>
+  Aceplay is **Linux only**. For macOS and Windows, use the official [Ace Stream](https://acestream.org/) applications.
+</Note>
+
+## System requirements
+
+Before installing Aceplay, ensure your system meets these requirements:
+
+- **Operating system** - Linux (any distribution)
+- **Video player** - At least one of: mpv, vlc, or ffplay
+- **acestream-engine** - Will be auto-started if not running
+
+### For building from source
+
+- **Go** - Version 1.22 or higher (tested with 1.24.2)
+- **make** - GNU Make for build automation
+
+## Installation methods
+
+Choose the installation method that works best for your system:
+
+<Tabs>
+  <Tab title="AUR (Arch Linux)">
+    ### Install from AUR
+
+    The easiest way to install on Arch Linux and derivatives is via the AUR:
+
+    <CodeGroup>
+    ```bash yay
+    yay -S aceplay
+    ```
+
+    ```bash paru
+    paru -S aceplay
+    ```
+    </CodeGroup>
+
+    This installs the latest release and all dependencies automatically.
+  </Tab>
+
+  <Tab title="Debian/Ubuntu">
+    ### Install .deb package
+
+    Download the latest .deb package from the [releases page](https://github.com/crstian19/aceplay/releases) and install:
+
+    ```bash
+    sudo dpkg -i aceplay_*.deb
+    ```
+
+    If you encounter dependency errors, run:
+
+    ```bash
+    sudo apt-get install -f
+    ```
+  </Tab>
+
+  <Tab title="Fedora/RHEL">
+    ### Install .rpm package
+
+    Download the latest .rpm package from the [releases page](https://github.com/crstian19/aceplay/releases) and install:
+
+    ```bash
+    sudo rpm -i aceplay-*.rpm
+    ```
+
+    On Fedora, you can also use dnf:
+
+    ```bash
+    sudo dnf install aceplay-*.rpm
+    ```
+  </Tab>
+
+  <Tab title="From source">
+    ### Build from source
+
+    Building from source gives you the latest features and allows you to customize the build:
+
+    <Steps>
+      <Step title="Clone the repository">
+        ```bash
+        git clone https://github.com/crstian19/aceplay.git
+        cd aceplay
+        ```
+      </Step>
+
+      <Step title="Build the binary">
+        ```bash
+        make build
+        ```
+
+        This compiles the binary to `build/aceplay` with version information from git.
+      </Step>
+
+      <Step title="Install to system">
+        ```bash
+        sudo make install
+        ```
+
+        This copies the binary to `/usr/local/bin/aceplay`.
+      </Step>
+    </Steps>
+
+    #### Build requirements
+
+    The build process requires:
+    - Go 1.22 or higher
+    - make
+    - git (for version information)
+
+    #### Build options
+
+    ```bash
+    # Build for current platform
+    make build
+
+    # Build for all platforms
+    make build-all
+
+    # Build with custom output directory
+    go build -o /custom/path/aceplay ./cmd
+    ```
+  </Tab>
+
+  <Tab title="Pre-compiled binaries">
+    ### Download pre-compiled binary
+
+    Download the latest binary for your platform from the [releases page](https://github.com/crstian19/aceplay/releases).
+
+    <Steps>
+      <Step title="Download the binary">
+        Choose the appropriate binary for your system:
+        - `aceplay-linux-amd64` - For 64-bit x86 systems
+        - `aceplay-linux-arm64` - For ARM64 systems
+      </Step>
+
+      <Step title="Make it executable">
+        ```bash
+        chmod +x aceplay-linux-amd64
+        ```
+      </Step>
+
+      <Step title="Move to PATH">
+        ```bash
+        sudo mv aceplay-linux-amd64 /usr/local/bin/aceplay
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Verify installation
+
+After installation, verify that Aceplay is working:
+
+```bash
+aceplay version
+```
+
+You should see output similar to:
+
+```
+Aceplay
+Version:    v1.0.0
+Commit:     abc1234
+Date:       2024-03-15
+Platform:   linux/amd64
+```
+
+## Install dependencies
+
+### Video player
+
+Aceplay requires a video player. Install at least one of these:
+
+<CodeGroup>
+```bash mpv (recommended)
+# Debian/Ubuntu
+sudo apt install mpv
+
+# Fedora
+sudo dnf install mpv
+
+# Arch Linux
+sudo pacman -S mpv
+```
+
+```bash VLC
+# Debian/Ubuntu
+sudo apt install vlc
+
+# Fedora
+sudo dnf install vlc
+
+# Arch Linux
+sudo pacman -S vlc
+```
+
+```bash ffplay
+# Debian/Ubuntu
+sudo apt install ffmpeg
+
+# Fedora
+sudo dnf install ffmpeg
+
+# Arch Linux
+sudo pacman -S ffmpeg
+```
+</CodeGroup>
+
+### acestream-engine
+
+Aceplay requires acestream-engine to function. The engine will be automatically started when needed, but you need to have it installed.
+
+Refer to the [Ace Stream documentation](https://acestream.org/) for installation instructions specific to your distribution.
+
+## Set up browser integration
+
+To open acestream:// links directly from your browser, register the protocol handler:
+
+```bash
+aceplay register-protocol
+```
+
+Or use the shorter version:
+
+```bash
+aceplay install
+```
+
+This creates a desktop entry at `~/.local/share/applications/aceplay.desktop` and registers the acestream:// protocol using xdg-utils.
+
+<Note>
+  Browser integration requires `xdg-utils` to be installed on your system.
+</Note>
+
+## Next steps
+
+<Card title="Quick start guide" icon="rocket" href="/quickstart">
+  Learn how to play your first stream with Aceplay
+</Card>

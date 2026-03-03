@@ -1,0 +1,394 @@
+---
+title: "Interactive Mode"
+description: "Visual configuration editor and setup wizard"
+icon: "wand-magic-sparkles"
+---
+
+Aceplay provides an interactive Terminal User Interface (TUI) for easy configuration. The interactive mode features a setup wizard for first-time users and a full configuration editor.
+
+## Setup Wizard (First Run)
+
+When you run Aceplay for the first time without a configuration file, the setup wizard automatically launches:
+
+```bash
+aceplay
+```
+
+### Wizard Flow
+
+The setup wizard guides you through initial configuration:
+
+**1. Welcome Screen**
+
+```
+⚡ Welcome to Aceplay!
+
+This appears to be your first time running Aceplay.
+Let's set up your preferences.
+```
+
+**2. Player Selection**
+
+The wizard detects installed video players and lets you choose:
+
+```
+┌─────────────────────────────────────────────┐
+│ First-time Setup                            │
+│                                             │
+│ Choose your default video player:          │
+│                                             │
+│ Default Player                              │
+│ This player will be used by default when    │
+│ playing streams                             │
+│                                             │
+│ > mpv - Recommended - Fast and lightweight  │
+│   vlc - Feature-rich, supports many formats │
+│   ffplay - Part of FFmpeg suite             │
+└─────────────────────────────────────────────┘
+```
+
+<Note>
+Only players that are actually installed on your system will appear in the list. If no players are found, you'll be prompted to install one.
+</Note>
+
+**3. HLS Mode**
+
+Configure whether to enable HLS streaming by default:
+
+```
+┌─────────────────────────────────────────────┐
+│ HLS Mode                                    │
+│ Enable HLS streaming by default?            │
+│ (Useful for some streams)                   │
+│                                             │
+│ > Yes                                       │
+│   No                                        │
+└─────────────────────────────────────────────┘
+```
+
+**4. Confirmation**
+
+After completing the wizard, your settings are displayed:
+
+```
+Configuration saved!
+
+Your settings:
+  • Default player: mpv
+  • HLS mode: false
+
+💡 Tip: You can change these settings anytime with:
+     aceplay config set player <player>
+     aceplay config set hls <true/false>
+     aceplay config show
+```
+
+### Non-Interactive Mode
+
+If running in a non-interactive environment (scripts, SSH without TTY, CI/CD), the wizard uses sensible defaults:
+
+- **Player**: First available player (preferring `mpv` if installed)
+- **HLS**: `false`
+
+```bash
+# Running without a terminal
+aceplay < /dev/null
+
+# Output:
+Running in non-interactive mode. Using default settings:
+  • Default player: mpv
+  • HLS mode: false
+```
+
+## Configuration Editor
+
+The configuration editor provides a full-featured TUI for managing all settings.
+
+### Launching the Editor
+
+You can open the interactive editor in several ways:
+
+```bash
+# Method 1: Interactive command
+aceplay interactive
+```
+
+```bash
+# Method 2: Config edit subcommand
+aceplay config edit
+```
+
+```bash
+# Method 3: Config without arguments (if terminal)
+aceplay config
+```
+
+### Editor Interface
+
+The editor is organized into sections:
+
+#### Video Player Section
+
+```
+┌─────────────────────────────────────────────┐
+│ Video Player                                │
+│                                             │
+│ Select your preferred video player:         │
+│                                             │
+│ Default Player                              │
+│ This player will be used by default when    │
+│ playing streams                             │
+│                                             │
+│ > mpv - Recommended - Fast and lightweight  │
+│   vlc - Feature-rich, supports many formats │
+│   ffplay - Part of FFmpeg suite             │
+└─────────────────────────────────────────────┘
+```
+
+#### Ace Stream Engine Section
+
+```
+┌─────────────────────────────────────────────┐
+│ Ace Stream Engine                           │
+│                                             │
+│ Configure the acestream-engine connection:  │
+│                                             │
+│ Engine Host                                 │
+│ Hostname where acestream-engine is running  │
+│ > localhost                                 │
+│                                             │
+│ Engine Port                                 │
+│ Port number for acestream-engine            │
+│ > 6878                                      │
+└─────────────────────────────────────────────┘
+```
+
+<Tip>
+Use `Tab` to navigate between fields, `Enter` to select, and arrow keys to choose options.
+</Tip>
+
+#### Playback Options Section
+
+```
+┌─────────────────────────────────────────────┐
+│ Playback Options                            │
+│                                             │
+│ Configure stream playback settings:         │
+│                                             │
+│ Timeout                                     │
+│ Maximum time to wait for a stream to start  │
+│                                             │
+│ > 30 seconds                                │
+│   1 minute                                  │
+│   2 minutes                                 │
+│   5 minutes                                 │
+│   10 minutes                                │
+│                                             │
+│ HLS Mode                                    │
+│ Enable HLS streaming by default?            │
+│ > Yes                                       │
+│   No                                        │
+└─────────────────────────────────────────────┘
+```
+
+#### Advanced Options Section
+
+```
+┌─────────────────────────────────────────────┐
+│ Advanced Options                            │
+│                                             │
+│ Additional settings:                        │
+│                                             │
+│ Verbose Mode                                │
+│ Enable detailed logging output?             │
+│ > Yes                                       │
+│   No                                        │
+└─────────────────────────────────────────────┘
+```
+
+### Completion
+
+After completing the editor, your updated settings are displayed:
+
+```
+✓ Configuration updated successfully!
+
+Your settings:
+  • Player:     mpv
+  • Engine:     localhost:6878
+  • Timeout:    1m0s
+  • HLS:        false
+  • Verbose:    false
+```
+
+## Configuration Menu
+
+Running `aceplay config` opens an interactive menu with quick actions:
+
+```
+⚙️  Aceplay Configuration
+
+Current Settings:
+  🎬 Player:    mpv
+  🔌 Engine:    localhost:6878
+  ⏱️  Timeout:   1m0s
+  📺 HLS:       ✗ No
+  📝 Verbose:   ✗ No
+
+What would you like to do?
+> ✏️  Edit all settings
+  🎬 Change player
+  🔌 Change engine host/port
+  ⏱️  Change timeout
+  📺 Toggle HLS
+  ❌ Exit
+```
+
+### Menu Options
+
+<AccordionGroup>
+  <Accordion title="Edit all settings">
+    Opens the full configuration editor with all sections.
+  </Accordion>
+  
+  <Accordion title="Change player">
+    Quick selector to change only the video player:
+    
+    ```
+    Select Player
+    > mpv - Recommended - Fast and lightweight
+      vlc - Feature-rich, supports many formats
+      ffplay - Part of FFmpeg suite
+    ```
+  </Accordion>
+  
+  <Accordion title="Change engine host/port">
+    Quick form to update acestream-engine connection:
+    
+    ```
+    Engine Host
+    localhost
+    
+    Engine Port
+    6878
+    ```
+  </Accordion>
+  
+  <Accordion title="Change timeout">
+    Quick selector for timeout duration:
+    
+    ```
+    Select Timeout
+    > 30 seconds
+      1 minute
+      2 minutes
+      5 minutes
+      10 minutes
+    ```
+  </Accordion>
+  
+  <Accordion title="Toggle HLS">
+    Instantly toggles HLS mode on/off:
+    
+    ```
+    ✓ HLS mode: ✓ Yes
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Navigation
+
+After each action, you can:
+- **🔙 Back to menu** - Return to the main menu
+- **❌ Exit** - Save and exit
+
+## Player Detection
+
+The interactive mode automatically detects which video players are installed:
+
+<CardGroup cols={3}>
+  <Card title="mpv" icon="circle-play">
+    Fast and lightweight player
+    
+    **Detected at:**
+    - `/usr/bin/mpv`
+    - `/usr/local/bin/mpv`
+    - `~/.local/bin/mpv`
+  </Card>
+  
+  <Card title="VLC" icon="video">
+    Feature-rich media player
+    
+    **Detected at:**
+    - `/usr/bin/vlc`
+    - `/usr/local/bin/vlc`
+    - `~/.local/bin/vlc`
+  </Card>
+  
+  <Card title="ffplay" icon="film">
+    FFmpeg's playback tool
+    
+    **Detected at:**
+    - `/usr/bin/ffplay`
+    - `/usr/local/bin/ffplay`
+    - `~/.local/bin/ffplay`
+  </Card>
+</CardGroup>
+
+<Warning>
+If no players are detected, you'll see an error:
+
+```
+No video players found. Please install mpv, vlc, or ffplay.
+```
+
+Install a player before using the interactive mode.
+</Warning>
+
+## Timeout Presets
+
+The interactive editor provides preset timeout values optimized for different scenarios:
+
+| Preset | Duration | Use Case |
+|--------|----------|----------|
+| 30 seconds | `30s` | Fast streams with many seeders |
+| 1 minute | `1m` | Default - works for most streams |
+| 2 minutes | `2m` | Slower streams or weak connections |
+| 5 minutes | `5m` | Very slow streams or low seeders |
+| 10 minutes | `10m` | Maximum patience for rare content |
+
+## Keyboard Controls
+
+The TUI uses standard keyboard navigation:
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate options |
+| `Tab` | Next field |
+| `Shift+Tab` | Previous field |
+| `Enter` | Select / Confirm |
+| `Space` | Toggle (for Yes/No) |
+| `Esc` | Cancel / Go back |
+| `Ctrl+C` | Exit without saving |
+
+## Technical Details
+
+The interactive mode is built with:
+
+- **[Bubble Tea](https://github.com/charmbracelet/bubbletea)** - TUI framework
+- **[Huh](https://github.com/charmbracelet/huh)** - Form and input components
+- **[Lipgloss](https://github.com/charmbracelet/lipgloss)** - Styling and layout
+
+### Source Code References
+
+The interactive components are implemented in:
+
+- `internal/ui/wizard.go:42` - `SetupWizard()` - First-run setup wizard
+- `internal/ui/wizard.go:171` - `ConfigEditor()` - Full configuration editor
+- `internal/ui/wizard.go:319` - `ConfigMenu()` - Interactive menu
+- `cmd/main.go:530` - `interactiveCmd` - Interactive command definition
+
+## Related Commands
+
+- [Config Command](/usage/config-command) - Command-line configuration
+- [Play Command](/usage/play-command) - Play streams with configured settings

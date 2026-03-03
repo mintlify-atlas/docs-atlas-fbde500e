@@ -1,0 +1,334 @@
+---
+title: Environment Variables
+description: Configure Aceplay using environment variables
+---
+
+## Overview
+
+Aceplay supports configuration through environment variables, which is useful for:
+
+- Containerized environments (Docker, Kubernetes)
+- CI/CD pipelines
+- Temporary configuration overrides
+- Scripts and automation
+
+All environment variables use the `ACEPLAY_` prefix.
+
+## Environment Variable Prefix
+
+Aceplay automatically reads environment variables with the `ACEPLAY_` prefix. The configuration system (Viper) is set up in `internal/config/config.go:104` with:
+
+```go
+v.SetEnvPrefix("ACEPLAY")
+v.AutomaticEnv()
+```
+
+## Supported Environment Variables
+
+### Player Configuration
+
+<ParamField path="ACEPLAY_PLAYER" type="string" default="mpv">
+  Video player to use for playback.
+  
+  **Valid values:** `mpv`, `vlc`, `ffplay`
+  
+  ```bash
+  export ACEPLAY_PLAYER=vlc
+  ```
+</ParamField>
+
+### Timeout Settings
+
+<ParamField path="ACEPLAY_TIMEOUT" type="duration" default="60s">
+  Maximum time to wait for a stream to become ready.
+  
+  **Format:** Duration string (e.g., `60s`, `2m`, `1m30s`)
+  
+  ```bash
+  export ACEPLAY_TIMEOUT=2m
+  ```
+</ParamField>
+
+<ParamField path="ACEPLAY_CONNECT_TIMEOUT" type="duration" default="5s">
+  Maximum time to wait when connecting to acestream-engine.
+  
+  ```bash
+  export ACEPLAY_CONNECT_TIMEOUT=10s
+  ```
+</ParamField>
+
+### Stream Options
+
+<ParamField path="ACEPLAY_HLS" type="boolean" default="false">
+  Enable HLS (HTTP Live Streaming) mode.
+  
+  **Valid values:** `true`, `false`
+  
+  ```bash
+  export ACEPLAY_HLS=true
+  ```
+</ParamField>
+
+<ParamField path="ACEPLAY_VERBOSE" type="boolean" default="false">
+  Enable verbose logging for detailed output.
+  
+  ```bash
+  export ACEPLAY_VERBOSE=true
+  ```
+</ParamField>
+
+### Engine Configuration
+
+<ParamField path="ACEPLAY_ENGINE_HOST" type="string" default="localhost">
+  Hostname or IP address of the acestream-engine.
+  
+  ```bash
+  export ACEPLAY_ENGINE_HOST=192.168.1.100
+  ```
+</ParamField>
+
+<ParamField path="ACEPLAY_ENGINE_PORT" type="integer" default="6878">
+  Port number for the acestream-engine HTTP API.
+  
+  ```bash
+  export ACEPLAY_ENGINE_PORT=6878
+  ```
+</ParamField>
+
+<ParamField path="ACEPLAY_ENGINE_AUTO_START" type="boolean" default="false">
+  Automatically start acestream-engine if not running.
+  
+  ```bash
+  export ACEPLAY_ENGINE_AUTO_START=true
+  ```
+</ParamField>
+
+<ParamField path="ACEPLAY_ENGINE_AUTO_START_COMMAND" type="string" default="">
+  Custom command to start the acestream-engine.
+  
+  ```bash
+  export ACEPLAY_ENGINE_AUTO_START_COMMAND="docker start acestream"
+  ```
+</ParamField>
+
+## Configuration Precedence
+
+Configuration values are resolved in the following order (highest priority first):
+
+1. **Command-line flags** - Direct flags passed to the command
+2. **Environment variables** - `ACEPLAY_*` variables
+3. **Configuration file** - `~/.config/aceplay/config.yaml`
+4. **Default values** - Built-in defaults
+
+### Precedence Example
+
+Given this configuration file:
+
+```yaml
+player: mpv
+engine:
+  host: localhost
+  port: 6878
+```
+
+And these environment variables:
+
+```bash
+export ACEPLAY_PLAYER=vlc
+export ACEPLAY_ENGINE_HOST=192.168.1.50
+```
+
+The effective configuration will be:
+- **Player:** `vlc` (from environment variable, overrides config file)
+- **Engine host:** `192.168.1.50` (from environment variable, overrides config file)
+- **Engine port:** `6878` (from config file)
+
+If you then run:
+
+```bash
+aceplay --player ffplay play acestream://CONTENT_ID
+```
+
+The effective configuration becomes:
+- **Player:** `ffplay` (from CLI flag, highest priority)
+- **Engine host:** `192.168.1.50` (from environment variable)
+- **Engine port:** `6878` (from config file)
+
+## Usage Examples
+
+### Basic Usage
+
+Set environment variables before running Aceplay:
+
+```bash
+export ACEPLAY_PLAYER=vlc
+export ACEPLAY_ENGINE_HOST=localhost
+export ACEPLAY_TIMEOUT=90s
+
+aceplay play acestream://CONTENT_ID
+```
+
+### One-Time Override
+
+Set variables for a single command:
+
+```bash
+ACEPLAY_PLAYER=ffplay aceplay play acestream://CONTENT_ID
+```
+
+### Docker Container
+
+Pass environment variables to a Docker container:
+
+```bash
+docker run -e ACEPLAY_PLAYER=vlc \
+           -e ACEPLAY_ENGINE_HOST=host.docker.internal \
+           -e ACEPLAY_ENGINE_PORT=6878 \
+           aceplay:latest play acestream://CONTENT_ID
+```
+
+### Docker Compose
+
+Define environment variables in `docker-compose.yml`:
+
+```yaml
+version: '3'
+services:
+  aceplay:
+    image: aceplay:latest
+    environment:
+      - ACEPLAY_PLAYER=mpv
+      - ACEPLAY_ENGINE_HOST=acestream-engine
+      - ACEPLAY_ENGINE_PORT=6878
+      - ACEPLAY_TIMEOUT=120s
+      - ACEPLAY_VERBOSE=true
+```
+
+### Shell Script
+
+Create a wrapper script with custom environment:
+
+```bash
+#!/bin/bash
+# aceplay-wrapper.sh
+
+export ACEPLAY_PLAYER=vlc
+export ACEPLAY_ENGINE_HOST=192.168.1.100
+export ACEPLAY_TIMEOUT=2m
+export ACEPLAY_VERBOSE=true
+
+aceplay "$@"
+```
+
+Usage:
+
+```bash
+chmod +x aceplay-wrapper.sh
+./aceplay-wrapper.sh play acestream://CONTENT_ID
+```
+
+### Environment File
+
+Create a `.env` file:
+
+```bash
+# aceplay.env
+ACEPLAY_PLAYER=mpv
+ACEPLAY_ENGINE_HOST=localhost
+ACEPLAY_ENGINE_PORT=6878
+ACEPLAY_TIMEOUT=60s
+ACEPLAY_HLS=false
+ACEPLAY_VERBOSE=false
+```
+
+Load it before running:
+
+```bash
+source aceplay.env
+aceplay play acestream://CONTENT_ID
+```
+
+Or with `export`:
+
+```bash
+export $(cat aceplay.env | xargs)
+aceplay play acestream://CONTENT_ID
+```
+
+## Environment Variables vs Config File
+
+| Use Case | Recommended Method |
+|----------|-------------------|
+| Persistent settings | Config file (`~/.config/aceplay/config.yaml`) |
+| Temporary overrides | Environment variables |
+| Container deployments | Environment variables |
+| CI/CD pipelines | Environment variables |
+| Multi-environment setups | Environment variables |
+| User preferences | Config file |
+| Scripts and automation | Environment variables |
+
+## Variable Name Mapping
+
+Environment variable names map to configuration file keys:
+
+| Environment Variable | Config File Key | CLI Flag |
+|---------------------|-----------------|----------|
+| `ACEPLAY_PLAYER` | `player` | `--player` |
+| `ACEPLAY_TIMEOUT` | `timeout` | `--timeout` |
+| `ACEPLAY_CONNECT_TIMEOUT` | `connect_timeout` | N/A |
+| `ACEPLAY_HLS` | `hls` | `--hls` |
+| `ACEPLAY_VERBOSE` | `verbose` | `--verbose` |
+| `ACEPLAY_ENGINE_HOST` | `engine.host` | `--engine-host` |
+| `ACEPLAY_ENGINE_PORT` | `engine.port` | `--engine-port` |
+| `ACEPLAY_ENGINE_AUTO_START` | `engine.auto_start` | N/A |
+| `ACEPLAY_ENGINE_AUTO_START_COMMAND` | `engine.auto_start_command` | N/A |
+
+<Note>
+  Nested configuration keys use underscores in environment variables. For example, `engine.host` becomes `ACEPLAY_ENGINE_HOST`.
+</Note>
+
+## Troubleshooting
+
+### Check Current Environment
+
+View all Aceplay-related environment variables:
+
+```bash
+env | grep ACEPLAY
+```
+
+### Verify Configuration
+
+Check which configuration is being used:
+
+```bash
+aceplay config show
+```
+
+### Debug Mode
+
+Enable verbose mode to see detailed configuration loading:
+
+```bash
+export ACEPLAY_VERBOSE=true
+aceplay play acestream://CONTENT_ID
+```
+
+### Clear Environment
+
+Unset all Aceplay environment variables:
+
+```bash
+unset ACEPLAY_PLAYER
+unset ACEPLAY_ENGINE_HOST
+unset ACEPLAY_ENGINE_PORT
+unset ACEPLAY_TIMEOUT
+unset ACEPLAY_HLS
+unset ACEPLAY_VERBOSE
+```
+
+Or unset all at once:
+
+```bash
+unset $(env | grep ACEPLAY | cut -d= -f1)
+```

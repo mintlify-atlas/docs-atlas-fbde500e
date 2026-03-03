@@ -1,0 +1,299 @@
+---
+title: Building from Source
+description: How to build Aceplay from source code
+---
+
+This guide covers building Aceplay from source, including prerequisites, build commands, and cross-compilation.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Go">
+    Aceplay requires Go 1.22 or higher (Go 1.25.0 is used in development).
+
+    ```bash
+    # Check your Go version
+    go version
+    ```
+
+    Download from [go.dev](https://go.dev/dl/) if needed.
+  </Step>
+
+  <Step title="Install Make">
+    The build system uses Make for task automation.
+
+    ```bash
+    # Debian/Ubuntu
+    sudo apt install build-essential
+
+    # Fedora/RHEL
+    sudo dnf install make
+
+    # Arch Linux
+    sudo pacman -S make
+    ```
+  </Step>
+
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/crstian19/aceplay.git
+    cd aceplay
+    ```
+  </Step>
+</Steps>
+
+## Quick Build
+
+The fastest way to build for your current platform:
+
+```bash
+make build
+```
+
+This creates the binary at `build/aceplay`.
+
+## Build Commands
+
+### Standard Build
+
+Build with version information embedded from Git:
+
+```bash
+make build
+```
+
+**What it does:**
+- Compiles for your current platform (OS/architecture)
+- Injects version from Git tags
+- Injects commit hash and build date
+- Outputs to `build/aceplay`
+
+**Version information:**
+```bash
+VERSION := $(shell git describe --tags --always --dirty)
+COMMIT := $(shell git rev-parse --short HEAD)
+DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+```
+
+These are injected via ldflags:
+```
+-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+```
+
+### Build for All Platforms
+
+Cross-compile for Linux AMD64 and ARM64:
+
+```bash
+make build-all
+```
+
+**Output:** Creates binaries in `dist/`:
+- `dist/aceplay-linux-amd64`
+- `dist/aceplay-linux-arm64`
+
+### Manual Build
+
+Build directly with Go (without version info):
+
+```bash
+go build -o build/aceplay ./cmd
+```
+
+### Cross-Compilation
+
+Build for a specific platform:
+
+```bash
+# For Linux AMD64
+GOOS=linux GOARCH=amd64 go build -o build/aceplay-linux-amd64 ./cmd
+
+# For Linux ARM64 (e.g., Raspberry Pi)
+GOOS=linux GOARCH=arm64 go build -o build/aceplay-linux-arm64 ./cmd
+```
+
+## Installation
+
+### Install to System
+
+Install the built binary to `/usr/bin`:
+
+```bash
+sudo make install
+```
+
+**What it does:**
+- Builds the binary (if not already built)
+- Installs to `/usr/bin/aceplay` with executable permissions
+- Installs desktop file to `/usr/share/applications/aceplay.desktop`
+
+**Custom install location:**
+```bash
+sudo make install DESTDIR=/usr/local
+```
+
+### Install for Development
+
+Install to `$GOPATH/bin` for local development:
+
+```bash
+make dev-install
+```
+
+This is useful when you want the binary in your PATH without sudo.
+
+### Uninstall
+
+Remove installed files:
+
+```bash
+sudo make uninstall
+```
+
+## Dependency Management
+
+### Download Dependencies
+
+```bash
+make deps
+```
+
+This runs:
+- `go mod download` - Downloads all dependencies
+- `go mod tidy` - Cleans up unused dependencies
+
+### Update Dependencies
+
+```bash
+# Update specific dependency
+go get -u github.com/spf13/cobra@latest
+
+# Update all dependencies
+go get -u ./...
+
+# Clean up
+make tidy
+```
+
+### Verify Dependencies
+
+```bash
+make tidy
+```
+
+Runs `go mod tidy` and `go mod verify` to ensure integrity.
+
+## Build Flags and Options
+
+### Version Information
+
+The Makefile automatically injects version information:
+
+```makefile
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+```
+
+### Build Directories
+
+- `build/` - Single platform builds (`make build`)
+- `dist/` - Cross-platform builds (`make build-all`)
+
+### Clean Build Artifacts
+
+```bash
+make clean
+```
+
+Removes:
+- `build/` directory
+- `dist/` directory
+- Go build cache
+
+## Running Without Installing
+
+### Run Directly
+
+```bash
+make run
+```
+
+Builds and runs with version info. Equivalent to:
+```bash
+go run -ldflags "..." ./cmd
+```
+
+### Run with Hot Reload
+
+For active development with automatic rebuilds:
+
+```bash
+make run-live
+```
+
+Requires [air](https://github.com/cosmtrek/air):
+```bash
+go install github.com/cosmtrek/air@latest
+```
+
+### Watch for Changes
+
+Auto-rebuild on file changes (requires `entr`):
+
+```bash
+make watch
+```
+
+## Troubleshooting
+
+### Go Version Too Old
+
+```
+go: module requires Go 1.22
+```
+
+**Solution:** Update Go from [go.dev/dl](https://go.dev/dl/)
+
+### Missing Dependencies
+
+```
+package X is not in GOROOT
+```
+
+**Solution:** Download dependencies:
+```bash
+make deps
+```
+
+### Permission Denied During Install
+
+```
+install: cannot create /usr/bin/aceplay: Permission denied
+```
+
+**Solution:** Use sudo:
+```bash
+sudo make install
+```
+
+### Cross-Compilation Errors
+
+If cross-compilation fails, ensure you have the target toolchain:
+
+```bash
+# For ARM64 on AMD64 system
+sudo apt install gcc-aarch64-linux-gnu
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Testing" icon="flask" href="/development/testing">
+    Learn how to run tests and ensure code quality
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/development/contributing">
+    Guidelines for contributing to the project
+  </Card>
+</CardGroup>

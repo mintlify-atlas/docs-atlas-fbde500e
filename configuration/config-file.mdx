@@ -1,0 +1,207 @@
+---
+title: Configuration File
+description: Configure Aceplay using a YAML configuration file
+---
+
+## Overview
+
+Aceplay uses a YAML configuration file to store persistent settings. The configuration file is automatically created when you run Aceplay for the first time or use the interactive configuration wizard.
+
+## Configuration File Location
+
+The configuration file is located at:
+
+```
+~/.config/aceplay/config.yaml
+```
+
+Alternatively, if `XDG_CONFIG_HOME` is set:
+
+```
+$XDG_CONFIG_HOME/aceplay/config.yaml
+```
+
+## Complete Configuration Example
+
+```yaml
+player: mpv
+timeout: 60s
+connect_timeout: 5s
+hls: false
+verbose: false
+
+engine:
+  host: localhost
+  port: 6878
+  auto_start: false
+  auto_start_command: ""
+```
+
+## Configuration Fields
+
+### Top-Level Fields
+
+<ResponseField name="player" type="string" default="mpv">
+  The video player to use for playback. Supported players: `mpv`, `vlc`, `ffplay`.
+  
+  See [Player Setup](/configuration/player-setup) for more details on configuring players.
+</ResponseField>
+
+<ResponseField name="timeout" type="duration" default="60s">
+  Maximum time to wait for a stream to become ready. Accepts duration strings like `60s`, `2m`, `1m30s`.
+</ResponseField>
+
+<ResponseField name="connect_timeout" type="duration" default="5s">
+  Maximum time to wait when connecting to the acestream-engine. Accepts duration strings.
+</ResponseField>
+
+<ResponseField name="hls" type="boolean" default="false">
+  Enable HLS (HTTP Live Streaming) mode. When enabled, streams are delivered using HLS protocol.
+</ResponseField>
+
+<ResponseField name="verbose" type="boolean" default="false">
+  Enable verbose logging mode for detailed output and debugging information.
+</ResponseField>
+
+### Engine Configuration
+
+The `engine` section configures the connection to acestream-engine:
+
+<Expandable title="engine" defaultOpen>
+  <ResponseField name="engine.host" type="string" default="localhost">
+    The hostname or IP address where acestream-engine is running.
+  </ResponseField>
+
+  <ResponseField name="engine.port" type="integer" default="6878">
+    The port number for the acestream-engine HTTP API.
+  </ResponseField>
+
+  <ResponseField name="engine.auto_start" type="boolean" default="false">
+    Automatically start the acestream-engine if it's not already running.
+  </ResponseField>
+
+  <ResponseField name="engine.auto_start_command" type="string" default="">
+    Custom command to use when starting the engine. If empty, uses the default `acestreamengine` command.
+    
+    Example:
+    ```yaml
+    engine:
+      auto_start: true
+      auto_start_command: "docker start acestream-engine"
+    ```
+  </ResponseField>
+</Expandable>
+
+## Managing Configuration
+
+### View Current Configuration
+
+Display your current configuration settings:
+
+```bash
+aceplay config show
+```
+
+### Interactive Configuration
+
+Launch the interactive configuration wizard:
+
+```bash
+aceplay config edit
+# or
+aceplay interactive
+```
+
+The wizard provides a user-friendly interface to:
+- Select your preferred video player
+- Configure acestream-engine settings
+- Set timeout and playback options
+- Enable/disable HLS and verbose mode
+
+### Set Individual Values
+
+Update specific configuration values from the command line:
+
+```bash
+# Set player
+aceplay config set player vlc
+
+# Configure engine
+aceplay config set engine.host 192.168.1.100
+aceplay config set engine.port 6878
+
+# Set timeout
+aceplay config set timeout 2m
+
+# Enable HLS
+aceplay config set hls true
+
+# Enable verbose mode
+aceplay config set verbose true
+```
+
+### Manual Editing
+
+You can also edit the configuration file directly with your preferred text editor:
+
+```bash
+$EDITOR ~/.config/aceplay/config.yaml
+```
+
+## Configuration Priority
+
+Configuration values are applied in the following order (later sources override earlier ones):
+
+1. **Default values** - Built-in defaults from `internal/config/config.go:14-22`
+2. **Configuration file** - Values from `~/.config/aceplay/config.yaml`
+3. **Environment variables** - See [Environment Variables](/configuration/environment-variables)
+4. **Command-line flags** - Flags passed directly to the `aceplay` command
+
+### Example Priority
+
+```bash
+# This uses default player (mpv)
+aceplay play acestream://CONTENT_ID
+
+# This uses player from config file
+# (if player: vlc is set in config.yaml)
+aceplay play acestream://CONTENT_ID
+
+# This uses environment variable
+export ACEPLAY_PLAYER=ffplay
+aceplay play acestream://CONTENT_ID
+
+# This uses command-line flag (highest priority)
+aceplay --player vlc play acestream://CONTENT_ID
+```
+
+## Default Values Reference
+
+These defaults are defined in `internal/config/config.go`:
+
+| Field | Default Value |
+|-------|---------------|
+| `player` | `mpv` |
+| `timeout` | `60s` |
+| `connect_timeout` | `5s` |
+| `hls` | `false` |
+| `verbose` | `false` |
+| `engine.host` | `localhost` |
+| `engine.port` | `6878` |
+| `engine.auto_start` | `false` |
+| `engine.auto_start_command` | `""` (empty) |
+
+## First Run Setup
+
+On first run, if no configuration file exists, Aceplay will automatically launch a setup wizard that:
+
+1. Detects available video players on your system
+2. Prompts you to select your preferred player
+3. Asks if you want to enable HLS mode
+4. Creates the configuration file with your selections
+
+You can trigger the setup wizard again anytime with:
+
+```bash
+aceplay interactive
+```

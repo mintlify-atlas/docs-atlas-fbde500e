@@ -1,0 +1,97 @@
+---
+title: Introduction to Aceplay
+description: A modern CLI tool for playing Ace Stream content on Linux with an elegant visual interface
+---
+
+<Note>
+  Aceplay is **Linux only**. For macOS and Windows, use the official [Ace Stream](https://acestream.org/) applications.
+</Note>
+
+## What is Aceplay?
+
+Aceplay is a modern reimplementation of `acestream-launcher` written in **Go**, providing an elegant command-line interface for playing Ace Stream content on Linux. Built with the Charm ecosystem, it offers a beautiful visual experience with spinners, progress bars, and styled terminal output.
+
+Aceplay automatically manages the acestream-engine process, connects to streams, and launches your preferred video player—all from a single command.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get started with AUR, .deb, .rpm, or from source
+  </Card>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Play your first stream in under 60 seconds
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/config-file">
+    Customize player settings and engine configuration
+  </Card>
+  <Card title="Browser integration" icon="globe" href="/advanced/browser-integration">
+    Click acestream:// links directly in your browser
+  </Card>
+</CardGroup>
+
+## Key features
+
+Aceplay brings several improvements over the original acestream-launcher:
+
+- **Auto-start engine** - Automatically starts acestream-engine if not running, just like the original acestream-launcher
+- **Compiled binary** - No runtime dependencies to manage, everything works out of the box
+- **Elegant visual interface** - Beautiful spinners, progress bars, and styles powered by Lipgloss
+- **Multiple players** - Support for mpv, vlc, ffplay, and more video players
+- **Flexible configuration** - Configure via CLI flags, YAML config file, or environment variables
+- **HLS mode** - HLS streaming support for compatible players
+- **Desktop notifications** - Integration with libnotify to keep you informed
+- **Browser integration** - Register acestream:// protocol handler to open links directly from your browser
+
+## Why use Aceplay?
+
+### Over the original acestream-launcher
+
+- **Modern codebase** - Written in Go with contemporary libraries and patterns
+- **Better performance** - Compiled binary with no Python interpreter overhead
+- **Beautiful UI** - Charm ecosystem provides a polished terminal experience
+- **Active development** - Regular updates and improvements
+
+### Over official Ace Stream apps
+
+- **Linux native** - Designed specifically for Linux systems
+- **Lightweight** - Minimal resource usage compared to full desktop applications
+- **Customizable** - Full control over player settings and configuration
+- **CLI workflow** - Perfect for terminal users and automation
+
+## How it works
+
+When you play a stream with Aceplay:
+
+<Steps>
+  <Step title="Parse URL">
+    Aceplay extracts the content ID from the acestream:// URL
+  </Step>
+  
+  <Step title="Start engine">
+    Checks if acestream-engine is running on localhost:6878, and automatically starts it if needed
+  </Step>
+  
+  <Step title="Connect to stream">
+    Requests the stream manifest from acestream-engine using the content ID
+  </Step>
+  
+  <Step title="Wait for stream">
+    Monitors stream status until it's ready for playback
+  </Step>
+  
+  <Step title="Launch player">
+    Opens your configured video player (mpv, vlc, or ffplay) with the stream URL
+  </Step>
+</Steps>
+
+The entire process is automatic and takes just a few seconds. Aceplay displays real-time statistics including download speed, upload speed, and peer connections while streaming.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Install Aceplay" icon="download" href="/installation">
+    Choose your preferred installation method
+  </Card>
+  <Card title="Quick start guide" icon="play" href="/quickstart">
+    Play your first stream now
+  </Card>
+</CardGroup>

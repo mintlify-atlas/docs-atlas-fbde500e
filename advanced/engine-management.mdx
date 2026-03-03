@@ -1,0 +1,404 @@
+---
+title: Engine management
+description: Understand how Aceplay manages the acestream-engine process
+---
+
+Aceplay can automatically detect, start, and manage the acestream-engine process. This page explains how engine management works and how to configure it.
+
+## Auto-start feature
+
+One of Aceplay's key features is automatic engine management. When you run a play command, Aceplay:
+
+1. Checks if acestream-engine is already running
+2. If not found, automatically starts it
+3. Waits for the engine to be ready
+4. Connects and streams content
+5. Optionally stops the engine when done (if Aceplay started it)
+
+This matches the behavior of the original `acestream-launcher` tool.
+
+## How engine detection works
+
+Aceplay searches for a running acestream-engine instance by checking multiple common ports:
+
+```go
+// From internal/acestream/client.go:147-161
+func findRunningEnginePort() int {
+    ports := []int{6878, 45615, 8080, 9999}
+
+    for _, port := range ports {
+        client := NewClient(WithPort(port))
+        ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+        defer cancel()
+
+        if client.IsRunning(ctx) {
+            return port
+        }
+    }
+
+    return 0
+}
+```
+
+The detection tries these endpoints to verify the engine is responding:
+- `/webui/app/127323294/template/api`
+- `/`
+- `/ace/getstream?content_id=test`
+
+<Note>
+  The engine is considered running if any of these endpoints return an HTTP response (even errors like 404 or 500 indicate the server is alive).
+</Note>
+
+## Starting the engine
+
+If no running engine is found and auto-start is enabled, Aceplay starts acestream-engine:
+
+```go
+// From internal/acestream/client.go:75-124
+func (e *EngineManager) Start() error {
+    // Try to find an already running engine
+    if runningPort := findRunningEnginePort(); runningPort != 0 {
+        e.httpPort = runningPort
+        return nil // Engine already running
+    }
+
+    // Find the engine executable
+    engineExe, err := e.findEngineExecutable()
+    if err != nil {
+        return err
+    }
+
+    // Start the engine with fixed HTTP port
+    cmd := exec.Command(engineExe, "--client-console", "--http-port", "6878")
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+
+    if err := cmd.Start(); err != nil {
+        return fmt.Errorf("failed to start acestream-engine: %w", err)
+    }
+
+    e.process = cmd.Process
+    e.wasStarted = true
+    e.httpPort = 6878
+
+    // Wait for engine to be ready (up to 30 seconds)
+    for i := 0; i < 60; i++ {
+        time.Sleep(500 * time.Millisecond)
+        if client.IsRunning(ctx) {
+            return nil
+        }
+    }
+
+    return fmt.Errorf("engine failed to start within 30 seconds")
+}
+```
+
+### Engine startup parameters
+
+When Aceplay starts the engine, it uses these parameters:
+
+- `--client-console` - Run in console mode (no GUI)
+- `--http-port 6878` - Use the default HTTP port
+
+## Engine executable lookup
+
+Aceplay searches for the `acestreamengine` binary in your PATH:
+
+```go
+// From internal/acestream/client.go:66-73
+func (e *EngineManager) findEngineExecutable() (string, error) {
+    if path, err := exec.LookPath(e.command); err == nil {
+        return path, nil
+    }
+
+    return "", fmt.Errorf("acestream-engine not found in PATH")
+}
+```
+
+<Warning>
+  Ensure `acestreamengine` is in your PATH, or Aceplay won't be able to auto-start it.
+</Warning>
+
+## Configuring the engine
+
+### Host and port
+
+You can specify a custom engine location:
+
+```bash
+aceplay play acestream://... --engine-host 192.168.1.100 --engine-port 6878
+```
+
+Or in the config file:
+
+```yaml
+engine:
+  host: 192.168.1.100
+  port: 6878
+```
+
+Or via environment variables:
+
+```bash
+export ACEPLAY_ENGINE_HOST=192.168.1.100
+export ACEPLAY_ENGINE_PORT=6878
+```
+
+### Timeouts
+
+Configure how long to wait for the engine:
+
+```yaml
+timeout: 60s          # Total stream wait time
+connect_timeout: 5s   # Engine connection timeout
+```
+
+## Port detection
+
+If you're running acestream-engine on a non-standard port, Aceplay will try to detect it on common ports: 6878, 45615, 8080, 9999.
+
+To force a specific port:
+
+```bash
+aceplay play acestream://... --engine-port 8080
+```
+
+## Stopping the engine
+
+Aceplay tracks whether it started the engine:
+
+```go
+// From internal/acestream/client.go:126-139
+func (e *EngineManager) Stop() error {
+    if !e.wasStarted || e.process == nil {
+        return nil // We didn't start it, don't stop it
+    }
+
+    if err := e.process.Kill(); err != nil {
+        return fmt.Errorf("failed to stop acestream-engine: %w", err)
+    }
+
+    e.process = nil
+    e.wasStarted = false
+    return nil
+}
+```
+
+<Note>
+  If acestream-engine was already running when you started Aceplay, it will **not** be stopped when Aceplay exits. Only engines that Aceplay started are stopped.
+</Note>
+
+## Manual engine management
+
+If you prefer to manage the engine yourself:
+
+### Start the engine manually
+
+```bash
+acestreamengine --client-console --http-port 6878
+```
+
+### Run in the background
+
+```bash
+acestreamengine --client-console --http-port 6878 &
+```
+
+### Use systemd (recommended)
+
+Create `/etc/systemd/system/acestream-engine.service`:
+
+```ini
+[Unit]
+Description=Acestream Engine
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+ExecStart=/usr/bin/acestreamengine --client-console --http-port 6878
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl enable acestream-engine
+sudo systemctl start acestream-engine
+```
+
+Check status:
+
+```bash
+sudo systemctl status acestream-engine
+```
+
+## Remote engine
+
+You can run acestream-engine on a separate machine:
+
+```bash
+# On the engine machine (192.168.1.100)
+acestreamengine --client-console --http-port 6878
+
+# On your local machine
+aceplay play acestream://... --engine-host 192.168.1.100
+```
+
+Or make it permanent in the config:
+
+```yaml
+engine:
+  host: 192.168.1.100
+  port: 6878
+```
+
+<Warning>
+  Ensure the acestream-engine HTTP port is accessible from your machine. You may need to configure firewall rules.
+</Warning>
+
+## Troubleshooting
+
+<Accordion title="Engine not found in PATH">
+  **Error:** `acestream-engine not found in PATH`
+
+  **Solutions:**
+
+  1. Install acestream-engine:
+     ```bash
+     # Check your distribution's package manager
+     # or download from acestream.org
+     ```
+
+  2. Verify it's in PATH:
+     ```bash
+     which acestreamengine
+     ```
+
+  3. Add to PATH if needed:
+     ```bash
+     export PATH=$PATH:/path/to/acestream/bin
+     ```
+
+  4. Or use a manually-started engine
+</Accordion>
+
+<Accordion title="Engine fails to start within 30 seconds">
+  **Error:** `acestream-engine failed to start within 30 seconds`
+
+  **Solutions:**
+
+  1. Check if the engine is actually starting:
+     ```bash
+     ps aux | grep acestreamengine
+     ```
+
+  2. Try starting manually to see errors:
+     ```bash
+     acestreamengine --client-console --http-port 6878
+     ```
+
+  3. Check port 6878 isn't already in use:
+     ```bash
+     sudo netstat -tlnp | grep 6878
+     ```
+
+  4. Increase timeout in config:
+     ```yaml
+     timeout: 120s
+     ```
+</Accordion>
+
+<Accordion title="Can't connect to engine on different host">
+  **Error:** Connection refused or timeout when using `--engine-host`
+
+  **Solutions:**
+
+  1. Verify engine is running on remote host:
+     ```bash
+     ssh user@192.168.1.100 'ps aux | grep acestreamengine'
+     ```
+
+  2. Test connectivity:
+     ```bash
+     curl http://192.168.1.100:6878/
+     ```
+
+  3. Check firewall on remote host:
+     ```bash
+     # On the engine host
+     sudo ufw allow 6878/tcp
+     # or
+     sudo firewall-cmd --add-port=6878/tcp --permanent
+     ```
+
+  4. Verify the engine is listening on all interfaces, not just localhost
+</Accordion>
+
+<Accordion title="Multiple engines detected on different ports">
+  **Behavior:** Aceplay finds an engine on a different port than expected
+
+  **Solutions:**
+
+  1. Stop unwanted engine instances:
+     ```bash
+     pkill acestreamengine
+     ```
+
+  2. Force a specific port:
+     ```bash
+     aceplay play acestream://... --engine-port 6878
+     ```
+
+  3. Set default in config:
+     ```yaml
+     engine:
+       port: 6878
+     ```
+</Accordion>
+
+## Engine health check
+
+You can verify your engine is working:
+
+```bash
+# Check if engine responds
+curl http://localhost:6878/
+
+# Check the API endpoint
+curl http://localhost:6878/webui/app/127323294/template/api
+
+# Test with a dummy content ID
+curl http://localhost:6878/ace/getstream?content_id=test
+```
+
+A working engine will return HTTP responses (even errors are OK - we just need it to respond).
+
+## Performance tuning
+
+### Connection timeout
+
+Control how long to wait for engine connection:
+
+```yaml
+connect_timeout: 10s  # Increase for slow systems
+```
+
+### Stream timeout
+
+Control how long to wait for stream to be ready:
+
+```yaml
+timeout: 120s  # Increase for slow streams
+```
+
+## Reference
+
+- Engine manager: `internal/acestream/client.go:40-144`
+- Port detection: `internal/acestream/client.go:146-161`
+- Health check: `internal/acestream/client.go:268-291`
+- Default port: `internal/acestream/client.go:21` (6878)
+- Startup command: `internal/acestream/client.go:98`

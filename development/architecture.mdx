@@ -1,0 +1,177 @@
+---
+title: Architecture
+description: Understanding Aceplay's project structure and architecture
+---
+
+Aceplay is built with a clean, modular architecture that separates concerns and makes the codebase easy to navigate and maintain.
+
+## Project Structure
+
+The project follows standard Go conventions with a clear separation between commands, internal packages, and reusable public packages:
+
+```
+aceplay/
+├── cmd/aceplay/          # Entry point and CLI commands
+├── internal/
+│   ├── acestream/        # HTTP client API for acestream-engine
+│   ├── config/           # Configuration management
+│   ├── player/           # Video player launcher
+│   ├── notify/           # Desktop notifications (libnotify)
+│   └── ui/               # Charm UI components (Bubble Tea, Lipgloss)
+├── pkg/acestream/        # acestream:// URL parser (public API)
+├── scripts/              # Utility scripts for build and release
+├── Makefile              # Build, test, and install targets
+└── README.md             # Project documentation
+```
+
+## Core Packages
+
+### cmd/aceplay
+
+The application entry point containing all CLI commands built with Cobra:
+
+- Root command setup and initialization
+- Command registration and routing
+- Flag parsing and validation
+- Integration of all internal packages
+
+### internal/acestream
+
+HTTP client for communicating with acestream-engine:
+
+- Engine status checking and auto-start logic
+- Stream initialization and management
+- HLS and direct streaming support
+- Timeout and retry handling
+- Built with Resty HTTP client
+
+### internal/config
+
+Configuration management using Viper:
+
+- YAML configuration file support (`~/.config/aceplay/config.yaml`)
+- Environment variable overrides (prefix: `ACEPLAY_`)
+- Default values and validation
+- Runtime configuration updates
+
+Supported configuration:
+```yaml
+player: mpv
+engine:
+  host: localhost
+  port: 6878
+timeout: 60s
+hls: false
+verbose: false
+```
+
+### internal/player
+
+Video player integration and process management:
+
+- Support for multiple players (mpv, vlc, ffplay)
+- Player auto-detection and validation
+- Process spawning and monitoring
+- Stream URL passing to player
+
+### internal/ui
+
+Terminal UI components built with the Charm ecosystem:
+
+- **Bubble Tea**: Interactive TUI framework
+- **Lipgloss**: Terminal styles and layout
+- **Huh**: Form and prompt components
+- Spinners and progress indicators
+- Status messages and error display
+
+### internal/notify
+
+Desktop notifications via libnotify:
+
+- Stream start/stop notifications
+- Error and warning alerts
+- Integration with system notification daemon
+
+### pkg/acestream
+
+Public package for parsing acestream:// URLs:
+
+- URL validation and parsing
+- Content ID extraction
+- Protocol handling
+- Reusable across projects
+
+## Dependencies
+
+### Core Dependencies
+
+- **Go 1.25.0** (minimum 1.22) - Programming language
+- **Cobra v1.10.2** - CLI framework for commands and flags
+- **Viper v1.21.0** - Configuration management with YAML/env support
+- **Resty v2.17.2** - HTTP client for acestream-engine API
+
+### UI and Display
+
+- **Lipgloss v2.0.0** - Terminal styling and layout
+- **Huh v0.8.0** - Interactive forms and prompts
+- **Bubble Tea v1.3.10** - TUI framework (indirect)
+- **Bubbles v1.0.0** - UI components (indirect)
+- **Log v0.4.2** - Structured logging with styles
+
+### Testing
+
+- **Testify v1.11.1** - Assertions and test utilities
+
+## Runtime Requirements
+
+### Required
+
+- **acestream-engine** - The Ace Stream engine daemon
+  - Automatically started if not running (same as original acestream-launcher)
+  - Listens on `localhost:6878` by default
+
+- **Video player** - One of:
+  - mpv (recommended, default)
+  - vlc
+  - ffplay
+
+### Optional
+
+- **libnotify** - For desktop notifications
+- **golangci-lint** - For code linting during development
+
+## Build System
+
+The project uses a comprehensive Makefile for all build operations:
+
+- Automatic version injection from Git tags
+- Cross-platform compilation support
+- Test coverage reporting
+- Code quality checks (fmt, vet, lint)
+- System installation with desktop file integration
+
+See [Building from Source](/development/building) for details.
+
+## Design Principles
+
+### Modularity
+
+Each package has a single, well-defined responsibility. Internal packages are isolated and only expose what's necessary.
+
+### Zero Runtime Dependencies
+
+Compiled as a single static binary with no external runtime dependencies (except acestream-engine and a video player).
+
+### User Experience First
+
+- Elegant terminal UI with visual feedback
+- Desktop notifications for key events
+- Sensible defaults that work out of the box
+- Flexible configuration options
+
+### Compatibility
+
+Maintains compatibility with the original acestream-launcher:
+- Auto-starts acestream-engine if not running
+- Uses same default ports and configuration
+- Supports acestream:// protocol links

@@ -1,0 +1,243 @@
+---
+title: Browser integration
+description: Set up acestream:// protocol handler for seamless browser integration
+---
+
+Aceplay can register itself as the default handler for `acestream://` links, allowing you to click links in your browser and have them automatically open in Aceplay.
+
+## How it works
+
+When you register the protocol handler, Aceplay:
+
+1. Creates a desktop entry file in `~/.local/share/applications/aceplay.desktop`
+2. Registers the `x-scheme-handler/acestream` MIME type using `xdg-mime`
+3. Associates acestream:// links with the Aceplay application
+
+After registration, clicking an `acestream://` link in any browser will automatically launch Aceplay and start playing the stream.
+
+## Installation
+
+<Steps>
+  <Step title="Run the install command">
+    Use either the `install` or `register-protocol` command:
+
+    ```bash
+    aceplay install
+    ```
+
+    Or:
+
+    ```bash
+    aceplay register-protocol
+    ```
+
+    Both commands perform the same action.
+  </Step>
+
+  <Step title="Verify the registration">
+    Check that the desktop file was created:
+
+    ```bash
+    cat ~/.local/share/applications/aceplay.desktop
+    ```
+
+    You should see:
+
+    ```ini
+    [Desktop Entry]
+    Name=Aceplay
+    Exec=/path/to/aceplay play %u
+    Type=Application
+    Terminal=false
+    MimeType=x-scheme-handler/acestream;
+    Categories=Network;Video;
+    ```
+  </Step>
+
+  <Step title="Test with a browser link">
+    Try clicking an acestream:// link in your browser. It should:
+    - Prompt you to open the link with Aceplay (first time only)
+    - Automatically launch Aceplay and start playing the stream
+  </Step>
+</Steps>
+
+## Desktop entry format
+
+The desktop entry file created by Aceplay follows the [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/). Here's what each field means:
+
+<ResponseField name="Name" type="string">
+  Application name displayed to the user
+</ResponseField>
+
+<ResponseField name="Exec" type="string">
+  Command to execute when the protocol is triggered. The `%u` is replaced with the acestream:// URL
+</ResponseField>
+
+<ResponseField name="Type" type="string">
+  Always `Application` for executable programs
+</ResponseField>
+
+<ResponseField name="Terminal" type="boolean">
+  Whether to run in a terminal. Set to `false` for Aceplay
+</ResponseField>
+
+<ResponseField name="MimeType" type="string">
+  MIME type handler. Set to `x-scheme-handler/acestream` for acestream:// URLs
+</ResponseField>
+
+<ResponseField name="Categories" type="string">
+  Desktop menu categories. Aceplay appears under Network and Video
+</ResponseField>
+
+## How browser integration works
+
+<Steps>
+  <Step title="User clicks acestream:// link">
+    When you click an `acestream://` link in a browser, the browser checks for registered protocol handlers.
+  </Step>
+
+  <Step title="Desktop environment looks up handler">
+    The desktop environment (GNOME, KDE, etc.) queries `xdg-mime` for the default application for `x-scheme-handler/acestream`.
+  </Step>
+
+  <Step title="Aceplay is launched">
+    The desktop environment executes the command from the desktop file:
+
+    ```bash
+    /usr/bin/aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+    ```
+  </Step>
+
+  <Step title="Stream starts playing">
+    Aceplay processes the URL and starts playing the stream using your configured player.
+  </Step>
+</Steps>
+
+## Supported browsers
+
+The protocol handler works with all major browsers on Linux:
+
+- **Firefox** - Prompts to choose application on first use
+- **Chrome/Chromium** - Prompts to allow external protocol handler
+- **Brave** - Same behavior as Chrome
+- **Edge** - Same behavior as Chrome
+- **Opera** - Prompts to allow external application
+
+<Note>
+  Some browsers may remember your choice. To change the default handler, you'll need to update browser settings or re-register the protocol.
+</Note>
+
+## Uninstalling
+
+To remove the protocol handler:
+
+```bash
+# Remove the desktop file
+rm ~/.local/share/applications/aceplay.desktop
+
+# Update the MIME database
+update-desktop-database ~/.local/share/applications
+```
+
+## Troubleshooting
+
+<Accordion title="Browser doesn't recognize acestream:// links">
+  **Solution:**
+
+  1. Re-run the install command:
+     ```bash
+     aceplay install
+     ```
+
+  2. Restart your browser
+
+  3. Verify xdg-utils is installed:
+     ```bash
+     which xdg-mime
+     ```
+
+  4. Check the desktop file exists:
+     ```bash
+     ls -la ~/.local/share/applications/aceplay.desktop
+     ```
+</Accordion>
+
+<Accordion title="Wrong application opens acestream:// links">
+  **Solution:**
+
+  Set Aceplay as the default handler:
+
+  ```bash
+  xdg-mime default aceplay.desktop x-scheme-handler/acestream
+  ```
+
+  You can verify the default handler:
+
+  ```bash
+  xdg-mime query default x-scheme-handler/acestream
+  ```
+
+  Should output: `aceplay.desktop`
+</Accordion>
+
+<Accordion title="Permission denied when creating desktop file">
+  **Solution:**
+
+  Ensure the applications directory exists and is writable:
+
+  ```bash
+  mkdir -p ~/.local/share/applications
+  chmod 755 ~/.local/share/applications
+  ```
+
+  Then re-run:
+
+  ```bash
+  aceplay install
+  ```
+</Accordion>
+
+<Accordion title="Browser shows 'No application found' error">
+  **Solution:**
+
+  This usually means the Aceplay binary path in the desktop file is incorrect.
+
+  1. Check the desktop file:
+     ```bash
+     cat ~/.local/share/applications/aceplay.desktop
+     ```
+
+  2. Verify the `Exec` path points to a valid Aceplay binary:
+     ```bash
+     which aceplay
+     ```
+
+  3. Re-install to update the path:
+     ```bash
+     aceplay install
+     ```
+</Accordion>
+
+## Environment-specific notes
+
+### GNOME
+
+GNOME uses the default xdg-mime system. The protocol handler should work immediately after installation.
+
+### KDE Plasma
+
+KDE may cache protocol handlers. After installation, you may need to:
+
+```bash
+kbuildsycoca5
+```
+
+### i3/Sway
+
+Window managers without a desktop environment may require additional configuration. Ensure `xdg-utils` is installed and a default file manager is set.
+
+## Reference
+
+- Desktop entry specification: `cmd/main.go:473-481`
+- Registration function: `cmd/main.go:473-508`
+- xdg-mime integration: `cmd/main.go:500-502`

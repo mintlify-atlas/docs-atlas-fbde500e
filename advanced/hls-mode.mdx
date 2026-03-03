@@ -1,0 +1,283 @@
+---
+title: HLS mode
+description: Use HTTP Live Streaming (HLS) for improved compatibility and seeking support
+---
+
+Aceplay supports two streaming modes: **direct HTTP streaming** (default) and **HLS (HTTP Live Streaming)**. HLS mode provides better seeking support and compatibility with certain players.
+
+## What is HLS?
+
+HTTP Live Streaming (HLS) is an adaptive streaming protocol developed by Apple. It breaks the stream into small segments and delivers them via HTTP, allowing for:
+
+- **Better seeking** - Jump to any point in the stream
+- **Adaptive bitrate** - Automatically adjust quality based on connection
+- **Better buffering** - More granular buffering control
+- **Wider compatibility** - Works with more players and devices
+
+## How Aceplay uses HLS
+
+When HLS mode is enabled, Aceplay requests a manifest file (`.m3u8`) from acestream-engine instead of a direct stream URL.
+
+### Direct mode (default)
+
+```
+http://localhost:6878/ace/getstream?id=<content-id>
+```
+
+This returns a direct HTTP stream that the player reads continuously.
+
+### HLS mode
+
+```
+http://localhost:6878/ace/manifest.m3u8?id=<content-id>
+```
+
+This returns an HLS manifest that points to stream segments.
+
+## Enabling HLS mode
+
+You can enable HLS mode in three ways:
+
+### 1. Command-line flag
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --hls
+```
+
+### 2. Configuration file
+
+Edit `~/.config/aceplay/config.yaml`:
+
+```yaml
+hls: true
+```
+
+### 3. Environment variable
+
+```bash
+export ACEPLAY_HLS=true
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+## When to use HLS mode
+
+<CardGroup cols={2}>
+  <Card title="Use HLS when" icon="check">
+    - You need seeking/scrubbing support
+    - Using a player with limited codec support
+    - Experiencing buffering issues
+    - Want adaptive bitrate streaming
+    - Using VLC (better HLS support than direct)
+  </Card>
+
+  <Card title="Use direct mode when" icon="times">
+    - You want lower latency
+    - Seeking is not required
+    - Using mpv (excellent direct stream support)
+    - Want simpler streaming setup
+    - Minimal overhead is important
+  </Card>
+</CardGroup>
+
+## Player compatibility
+
+All supported players work with both modes, but have different strengths:
+
+| Player | Direct Mode | HLS Mode | Recommendation |
+|--------|-------------|----------|----------------|
+| **mpv** | Excellent | Good | Use direct mode for best performance |
+| **vlc** | Good | Excellent | Use HLS mode for better seeking |
+| **ffplay** | Good | Good | Either mode works well |
+
+## HLS implementation details
+
+Aceplay's HLS implementation is located in `internal/acestream/client.go:293-307`. Here's how it works:
+
+```go
+func (c *Client) GetStreamURL(contentID string, hls bool) (string, error) {
+    var streamURL string
+
+    if hls {
+        // HLS stream using manifest endpoint
+        streamURL = fmt.Sprintf("%s/ace/manifest.m3u8?id=%s", c.baseURL(), contentID)
+    } else {
+        // Direct HTTP stream
+        streamURL = fmt.Sprintf("%s/ace/getstream?id=%s", c.baseURL(), contentID)
+    }
+
+    return streamURL, nil
+}
+```
+
+<Note>
+  The acestream-engine handles the actual HLS segmentation and manifest generation. Aceplay simply requests the appropriate endpoint based on the mode.
+</Note>
+
+## Example usage
+
+### Basic HLS playback
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --hls
+```
+
+### HLS with specific player
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --hls --player vlc
+```
+
+### HLS with custom engine
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 \
+  --hls \
+  --engine-host 192.168.1.100 \
+  --engine-port 6878
+```
+
+### Make HLS default
+
+Set it in your config file for all streams:
+
+```yaml
+hls: true
+player: vlc
+```
+
+Then simply:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+## Performance considerations
+
+### Latency
+
+- **Direct mode**: 2-5 seconds latency
+- **HLS mode**: 5-15 seconds latency (due to segment buffering)
+
+<Warning>
+  If you're watching live content and need minimal delay, use direct mode.
+</Warning>
+
+### Bandwidth
+
+- **Direct mode**: Continuous stream, minimal overhead
+- **HLS mode**: Segmented stream, slight overhead from manifest requests
+
+For most use cases, the difference is negligible.
+
+### CPU usage
+
+Both modes have similar CPU usage. The player does the decoding, not Aceplay.
+
+## Seeking and scrubbing
+
+One of the main advantages of HLS mode is better seeking support:
+
+### Direct mode
+
+- Seeking may not work or may be slow
+- Some players cache the entire stream before seeking
+- Limited by how acestream-engine handles direct stream seeks
+
+### HLS mode
+
+- Fast seeking to any point in the stream
+- Players can request specific segments
+- More predictable seeking behavior
+
+## Troubleshooting
+
+<Accordion title="HLS mode not working">
+  **Symptoms:** Error when trying to play with `--hls` flag
+
+  **Solutions:**
+
+  1. Verify acestream-engine is running and supports HLS:
+     ```bash
+     curl http://localhost:6878/ace/manifest.m3u8?id=test
+     ```
+
+  2. Check engine version (older versions may not support HLS)
+
+  3. Try without HLS to verify the stream itself works:
+     ```bash
+     aceplay play acestream://... # without --hls
+     ```
+</Accordion>
+
+<Accordion title="Buffering issues with HLS">
+  **Symptoms:** Frequent buffering or stuttering in HLS mode
+
+  **Solutions:**
+
+  1. Increase player cache:
+     ```bash
+     aceplay config set player mpv
+     # mpv uses --cache=yes by default
+     ```
+
+  2. For VLC, the cache is already set to 3000ms (see `internal/player/player.go:78-82`)
+
+  3. Check network connection to acestream-engine
+
+  4. Try direct mode if buffering persists
+</Accordion>
+
+<Accordion title="Seeking not working in HLS mode">
+  **Symptoms:** Can't seek/scrub even with HLS enabled
+
+  **Solutions:**
+
+  1. Ensure the player supports HLS seeking:
+     - VLC: Full support
+     - mpv: Full support
+     - ffplay: Limited support
+
+  2. Wait for the stream to buffer some content before seeking
+
+  3. Try a different player:
+     ```bash
+     aceplay play acestream://... --hls --player vlc
+     ```
+</Accordion>
+
+<Accordion title="High latency in HLS mode">
+  **Symptoms:** 10-20 second delay behind live
+
+  **Solutions:**
+
+  This is normal for HLS due to segment buffering.
+
+  If you need lower latency:
+
+  1. Use direct mode instead:
+     ```bash
+     aceplay play acestream://... # without --hls
+     ```
+
+  2. Or accept the trade-off for seeking capability
+</Accordion>
+
+## Configuration precedence
+
+When HLS mode is set in multiple places, the priority is:
+
+1. **CLI flag** `--hls` (highest priority)
+2. **Environment variable** `ACEPLAY_HLS=true`
+3. **Config file** `hls: true`
+4. **Default** `false` (direct mode)
+
+```bash
+# Config file has hls: true, but flag overrides to false
+aceplay play acestream://... --hls=false
+```
+
+## Reference
+
+- HLS URL generation: `internal/acestream/client.go:293-307`
+- Default mode: `internal/config/config.go:20` (DefaultHLS = false)
+- CLI flag: `cmd/main.go:128` (--hls flag)

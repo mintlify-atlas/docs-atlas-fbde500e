@@ -1,0 +1,479 @@
+---
+title: Contributing
+description: Guidelines for contributing to Aceplay
+---
+
+Contributions to Aceplay are welcome! This guide covers the contribution workflow, code style, and pull request process.
+
+## Getting Started
+
+<Steps>
+  <Step title="Fork the repository">
+    Create your own fork of the repository on GitHub:
+
+    ```bash
+    # Click "Fork" on https://github.com/crstian19/aceplay
+    ```
+  </Step>
+
+  <Step title="Clone your fork">
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/aceplay.git
+    cd aceplay
+    ```
+  </Step>
+
+  <Step title="Create a feature branch">
+    ```bash
+    git checkout -b feature/amazing-feature
+    ```
+
+    Branch naming conventions:
+    - `feature/` - New features
+    - `fix/` - Bug fixes
+    - `docs/` - Documentation updates
+    - `refactor/` - Code refactoring
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    make deps
+    ```
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### 1. Make Your Changes
+
+Write clean, well-documented code following the [code style guidelines](#code-style-guidelines).
+
+### 2. Add Tests
+
+All new features and bug fixes should include tests:
+
+```bash
+# Run tests as you develop
+make test
+
+# Check coverage
+make test-coverage
+```
+
+See [Testing](/development/testing) for details.
+
+### 3. Run Quality Checks
+
+Before committing, run all checks:
+
+```bash
+make check
+```
+
+This runs:
+- `make fmt` - Format code
+- `make vet` - Static analysis
+- `make lint` - Linting
+- `make test` - Full test suite
+
+<Warning>
+Always run `make check` before committing. Pull requests that don't pass these checks will not be merged.
+</Warning>
+
+### 4. Commit Your Changes
+
+Write clear, descriptive commit messages:
+
+```bash
+git add .
+git commit -m "Add support for custom player arguments"
+```
+
+**Good commit messages:**
+- "Add support for custom player arguments"
+- "Fix race condition in stream initialization"
+- "Update configuration documentation"
+
+**Bad commit messages:**
+- "Fixed stuff"
+- "WIP"
+- "Updates"
+
+### 5. Push to Your Fork
+
+```bash
+git push origin feature/amazing-feature
+```
+
+### 6. Open a Pull Request
+
+On GitHub:
+1. Navigate to your fork
+2. Click "Pull Request"
+3. Select your feature branch
+4. Fill out the PR template with:
+   - Description of changes
+   - Related issue numbers (if any)
+   - Testing performed
+   - Screenshots (for UI changes)
+
+## Code Style Guidelines
+
+### General Principles
+
+From AGENTS.md:
+
+- Write clean, readable Go code
+- Follow standard Go conventions
+- Keep functions focused and small (single responsibility)
+- Use meaningful variable and function names
+- Add comments for exported functions and types
+
+### Naming Conventions
+
+```go
+// Variables: camelCase
+configPath := "/path/to/config"
+isFirstRun := true
+
+// Constants: PascalCase or camelCase for unexported
+const DefaultPlayer = "mpv"
+const maxRetries = 3
+
+// Functions: PascalCase for exported, camelCase for unexported
+func LoadConfig(path string) (*Config, error) { }
+func isValidURL(url string) bool { }
+
+// Types/Structs: PascalCase
+type Config struct { }
+type EngineConfig struct { }
+
+// Interfaces: PascalCase with "er" suffix
+type Reader interface { }
+type ConfigLoader interface { }
+```
+
+### Import Organization
+
+Organize imports in groups (standard library first, then external):
+
+```go
+import (
+    "context"
+    "fmt"
+    "os"
+    "time"
+
+    "charm.land/lipgloss/v2"
+    "github.com/spf13/cobra"
+    "github.com/spf13/viper"
+    "github.com/stretchr/testify/assert"
+)
+```
+
+Run `make fmt` to organize automatically.
+
+### Error Handling
+
+Always handle errors explicitly:
+
+```go
+// Good - wrap errors with context
+if err != nil {
+    return fmt.Errorf("failed to load config: %w", err)
+}
+
+// Good - early return on error
+cfg, err := Load(configPath)
+if err != nil {
+    return fmt.Errorf("error loading configuration: %w", err)
+}
+
+// Bad - ignoring errors
+_ = LoadConfig(path)
+
+// Bad - no context
+if err != nil {
+    return err
+}
+```
+
+### Struct Tags
+
+Use struct tags for configuration and serialization:
+
+```go
+type Config struct {
+    Player  string        `mapstructure:"player"`
+    Engine  EngineConfig  `mapstructure:"engine"`
+    Timeout time.Duration `mapstructure:"timeout"`
+    HLS     bool          `mapstructure:"hls"`
+}
+```
+
+### Logging
+
+Use the Charm log package consistently:
+
+```go
+import "github.com/charmbracelet/log"
+
+log.Info("starting application")
+log.Debugf("config loaded from %s", configPath)
+log.Errorf("failed to connect: %v", err)
+```
+
+### CLI Commands
+
+Use Cobra with helpful descriptions:
+
+```go
+var playCmd = &cobra.Command{
+    Use:   "play [acestream-url]",
+    Short: "Play an Ace Stream URL",
+    Long:  `Play Ace Stream content using your configured video player.`,
+    Args:  cobra.ExactArgs(1),
+    RunE:  runPlay,
+}
+```
+
+## Testing Requirements
+
+### Test Coverage
+
+All new code should include tests:
+
+- **New features**: Add tests covering main functionality and edge cases
+- **Bug fixes**: Add regression tests to prevent recurrence
+- **Refactoring**: Ensure existing tests still pass
+
+Target coverage:
+- Critical paths: 80%+
+- Utilities: 70%+
+- UI components: Best effort
+
+### Test Structure
+
+Use table-driven tests:
+
+```go
+func TestParseURL(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   string
+        wantID  string
+        wantErr bool
+    }{
+        {"valid URL", "acestream://abc123", "abc123", false},
+        {"invalid protocol", "http://example.com", "", true},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            id, err := ParseURL(tt.input)
+            if tt.wantErr {
+                assert.Error(t, err)
+            } else {
+                assert.NoError(t, err)
+                assert.Equal(t, tt.wantID, id)
+            }
+        })
+    }
+}
+```
+
+See [Testing](/development/testing) for detailed guidelines.
+
+## Documentation
+
+Update documentation when:
+
+- Adding new features
+- Changing configuration options
+- Modifying CLI commands
+- Changing behavior
+
+Documentation locations:
+- `README.md` - Project overview and quick start
+- `AGENTS.md` - Development guidelines
+- `CHANGELOG.md` - Version history
+- Code comments - Exported functions and types
+
+## Pull Request Guidelines
+
+### PR Checklist
+
+Before submitting:
+
+- [ ] Code follows style guidelines
+- [ ] `make check` passes without errors
+- [ ] Tests added for new features/fixes
+- [ ] Documentation updated
+- [ ] Commit messages are clear and descriptive
+- [ ] PR description explains changes and motivation
+
+### PR Review Process
+
+1. **Automated checks**: CI runs tests and linting
+2. **Code review**: Maintainers review your changes
+3. **Feedback**: Address review comments
+4. **Approval**: PR is approved and merged
+
+### Responding to Feedback
+
+When reviewers request changes:
+
+1. Make the requested changes
+2. Run `make check` again
+3. Commit and push updates
+4. Respond to review comments
+
+```bash
+# After making changes
+git add .
+git commit -m "Address review feedback: improve error handling"
+git push origin feature/amazing-feature
+```
+
+## Common Contribution Tasks
+
+### Adding a New Command
+
+<Steps>
+  <Step title="Create command file">
+    Add command in appropriate package
+  </Step>
+
+  <Step title="Register with Cobra">
+    Register in `cmd/aceplay/main.go`
+  </Step>
+
+  <Step title="Add tests">
+    Create `*_test.go` file with test cases
+  </Step>
+
+  <Step title="Update documentation">
+    Document in README.md and relevant docs
+  </Step>
+</Steps>
+
+### Adding a Configuration Option
+
+<Steps>
+  <Step title="Update Config struct">
+    Add field to `Config` struct in `internal/config/config.go`
+  </Step>
+
+  <Step title="Set default value">
+    Add default in `NewConfig()` function
+  </Step>
+
+  <Step title="Document in README">
+    Add to configuration section with example
+  </Step>
+
+  <Step title="Add tests">
+    Test loading and validation
+  </Step>
+</Steps>
+
+### Fixing a Bug
+
+<Steps>
+  <Step title="Write failing test">
+    Create test that reproduces the bug
+  </Step>
+
+  <Step title="Fix the bug">
+    Implement the fix
+  </Step>
+
+  <Step title="Verify test passes">
+    Ensure the new test now passes
+  </Step>
+
+  <Step title="Run all tests">
+    Make sure no regressions: `make test`
+  </Step>
+</Steps>
+
+## Dependencies
+
+### Adding Dependencies
+
+When adding new dependencies:
+
+```bash
+# Add dependency
+go get github.com/example/package@latest
+
+# Clean up
+make tidy
+
+# Verify
+go mod verify
+```
+
+**Guidelines:**
+- Keep dependencies minimal
+- Prefer well-maintained packages
+- Check license compatibility (MIT preferred)
+- Document why the dependency is needed
+
+### Updating Dependencies
+
+```bash
+# Update specific package
+go get -u github.com/spf13/cobra@latest
+
+# Update all dependencies
+go get -u ./...
+
+# Clean up
+make tidy
+```
+
+## Getting Help
+
+If you need help:
+
+1. **Check existing issues**: Search GitHub issues for similar problems
+2. **Read documentation**: Review README.md and AGENTS.md
+3. **Ask questions**: Open a GitHub issue with the "question" label
+4. **Join discussions**: Participate in GitHub Discussions
+
+## Code of Conduct
+
+Be respectful and constructive:
+
+- Use welcoming and inclusive language
+- Respect differing viewpoints and experiences
+- Accept constructive criticism gracefully
+- Focus on what is best for the community
+
+## Recognition
+
+Contributors are recognized in:
+
+- GitHub contributors page
+- CHANGELOG.md for significant contributions
+- Project README for major features
+
+Thank you for contributing to Aceplay!
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand the project structure
+  </Card>
+  <Card title="Building" icon="hammer" href="/development/building">
+    Learn how to build from source
+  </Card>
+  <Card title="Testing" icon="flask" href="/development/testing">
+    Testing guidelines and commands
+  </Card>
+  <Card title="Go Documentation" icon="book" href="https://go.dev/doc/">
+    Official Go documentation
+  </Card>
+</CardGroup>

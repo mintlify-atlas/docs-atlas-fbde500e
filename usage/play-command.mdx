@@ -1,0 +1,246 @@
+---
+title: "Play Command"
+description: "Play Ace Stream content directly from the command line"
+icon: "play"
+---
+
+The `play` command is the primary way to play Ace Stream content with Aceplay. It connects to the acestream-engine, retrieves the stream, and launches your configured video player.
+
+## Syntax
+
+```bash
+aceplay play [acestream-url] [flags]
+```
+
+You can also use the shorthand form by omitting the `play` subcommand:
+
+```bash
+aceplay [acestream-url] [flags]
+```
+
+## URL Formats
+
+Aceplay accepts Ace Stream URLs in the following formats:
+
+<CodeGroup>
+
+```bash Full acestream:// URL
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+```bash Content ID only
+aceplay play 94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+```bash URL-encoded (browser format)
+aceplay play acestream%3A%2F%2F94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+</CodeGroup>
+
+<Note>
+The Content ID is a 40-character hexadecimal string (SHA-1 hash). Aceplay will automatically add the `acestream://` prefix if you provide just the content ID.
+</Note>
+
+## Flags
+
+The play command accepts the following flags to override your default configuration:
+
+<ParamField path="--player" type="string" default="mpv">
+  Specify which video player to use for playback.
+  
+  **Supported players:**
+  - `mpv` - Recommended for its lightweight design and performance
+  - `vlc` - Feature-rich player with wide format support
+  - `ffplay` - Part of the FFmpeg suite
+
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --player vlc
+  ```
+</ParamField>
+
+<ParamField path="--engine-host" type="string" default="localhost">
+  Hostname or IP address where acestream-engine is running.
+  
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --engine-host 192.168.1.100
+  ```
+</ParamField>
+
+<ParamField path="--engine-port" type="integer" default="6878">
+  Port number for the acestream-engine HTTP API.
+  
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --engine-port 8080
+  ```
+</ParamField>
+
+<ParamField path="--timeout" type="duration" default="60s">
+  Maximum time to wait for the stream to become ready.
+  
+  Accepts duration strings like `30s`, `1m`, `90s`, `2m30s`.
+  
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --timeout 2m
+  ```
+</ParamField>
+
+<ParamField path="--hls" type="boolean" default="false">
+  Enable HLS (HTTP Live Streaming) mode for playback.
+  
+  Some streams may work better with HLS enabled.
+  
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --hls
+  ```
+</ParamField>
+
+<ParamField path="--verbose" type="boolean" default="false">
+  Enable verbose output with detailed logging information.
+  
+  Useful for debugging connection or playback issues.
+  
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --verbose
+  ```
+</ParamField>
+
+<ParamField path="--config" type="string">
+  Path to a custom configuration file or directory.
+  
+  Example:
+  ```bash
+  aceplay play acestream://94c2... --config ~/.aceplay-custom
+  ```
+</ParamField>
+
+## Usage Examples
+
+### Basic Playback
+
+Play a stream with default settings:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+```
+
+### Using a Specific Player
+
+Play with VLC instead of the default player:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --player vlc
+```
+
+### Remote Engine Connection
+
+Connect to acestream-engine running on another machine:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 \
+  --engine-host 192.168.1.100 \
+  --engine-port 6878
+```
+
+### Extended Timeout for Slow Streams
+
+Increase timeout for streams that take longer to start:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --timeout 5m
+```
+
+### Enable HLS Mode
+
+Use HLS streaming for better compatibility:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --hls
+```
+
+### Verbose Debugging Output
+
+Enable detailed logging to troubleshoot issues:
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 --verbose
+```
+
+### Combining Multiple Flags
+
+```bash
+aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209 \
+  --player mpv \
+  --timeout 2m \
+  --hls \
+  --verbose
+```
+
+## Example Output
+
+When you run the play command, you'll see output similar to this:
+
+```
+Parsing Ace Stream URL...
+Content ID extracted: 94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+Initializing player: mpv
+Connecting to acestream-engine at localhost:6878
+Waiting for stream to be ready...
+
+✓ Stream ready! Playing...
+  URL: http://127.0.0.1:6878/ace/getstream?id=94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+
+Status: playing | Download: 2.5 MB/s | Upload: 512 KB/s | Peers: 15
+```
+
+<Tip>
+The output includes real-time stream statistics showing download/upload speeds and the number of connected peers.
+</Tip>
+
+## How It Works
+
+1. **URL Parsing**: Aceplay validates and extracts the content ID from the acestream:// URL
+2. **Engine Connection**: Connects to acestream-engine (starts it automatically if not running)
+3. **Stream Request**: Requests the stream using the content ID
+4. **Waiting**: Polls the engine until the stream is ready (with timeout)
+5. **Player Launch**: Launches your configured video player with the stream URL
+6. **Monitoring**: Displays real-time statistics while streaming
+
+## Troubleshooting
+
+<Warning>
+If the stream fails to start, check that:
+- acestream-engine is installed and accessible
+- The content ID is valid (40 hexadecimal characters)
+- Your firewall allows connections to the engine port (default 6878)
+- The stream has enough peers (some streams may have no seeders)
+</Warning>
+
+### Common Issues
+
+**Stream timeout**: Increase the timeout value if the stream takes a long time to start:
+```bash
+aceplay play acestream://... --timeout 5m
+```
+
+**Player not found**: Specify a different player or install one:
+```bash
+aceplay play acestream://... --player vlc
+```
+
+**Engine connection failed**: Check that acestream-engine is running:
+```bash
+# Check if engine is running
+curl http://localhost:6878/webui/api/service?method=get_version
+```
+
+## Related Commands
+
+- [Config Command](/usage/config-command) - Configure default settings
+- [Interactive Mode](/usage/interactive-mode) - Use the interactive configuration wizard

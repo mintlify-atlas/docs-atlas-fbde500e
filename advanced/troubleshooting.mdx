@@ -1,0 +1,524 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Aceplay
+---
+
+This guide covers common problems you might encounter when using Aceplay and how to solve them.
+
+## Enable verbose mode
+
+For any troubleshooting, start by enabling verbose logging:
+
+```bash
+aceplay play acestream://... --verbose
+```
+
+Or set it permanently:
+
+```yaml
+verbose: true
+```
+
+This shows detailed information about:
+- Configuration loading
+- Engine detection and startup
+- Stream connection process
+- Player launching
+
+## Common issues
+
+### Engine not found
+
+<Accordion title="Error: acestream-engine not found in PATH">
+  **Cause:** Aceplay can't locate the `acestreamengine` executable
+
+  **Solutions:**
+
+  1. **Install acestream-engine:**
+
+     Visit [acestream.org](https://acestream.org) and follow installation instructions for your distribution.
+
+  2. **Verify installation:**
+
+     ```bash
+     which acestreamengine
+     ```
+
+     Should output the path to the binary.
+
+  3. **Check PATH:**
+
+     ```bash
+     echo $PATH
+     ```
+
+     Ensure the directory containing `acestreamengine` is in your PATH.
+
+  4. **Add to PATH temporarily:**
+
+     ```bash
+     export PATH=$PATH:/path/to/acestream/bin
+     ```
+
+  5. **Or use a pre-started engine:**
+
+     Start the engine manually in another terminal:
+
+     ```bash
+     acestreamengine --client-console --http-port 6878
+     ```
+
+     Then run Aceplay normally.
+</Accordion>
+
+### Player not found
+
+<Accordion title="Error: player 'mpv' not found">
+  **Cause:** The configured video player is not installed
+
+  **Solutions:**
+
+  1. **Install the player:**
+
+     <CodeGroup>
+     ```bash Arch Linux
+     sudo pacman -S mpv
+     ```
+
+     ```bash Debian/Ubuntu
+     sudo apt install mpv
+     ```
+
+     ```bash Fedora
+     sudo dnf install mpv
+     ```
+     </CodeGroup>
+
+  2. **Use a different player:**
+
+     ```bash
+     aceplay play acestream://... --player vlc
+     ```
+
+  3. **Check available players:**
+
+     ```bash
+     which mpv
+     which vlc
+     which ffplay
+     ```
+
+  4. **List installed players:**
+
+     Aceplay detects available players automatically. Run the setup wizard to see what's available:
+
+     ```bash
+     aceplay interactive
+     ```
+</Accordion>
+
+### Stream timeout
+
+<Accordion title="Error: failed to get stream: context deadline exceeded">
+  **Cause:** Stream took longer than the configured timeout to become ready
+
+  **Solutions:**
+
+  1. **Increase timeout:**
+
+     ```bash
+     aceplay play acestream://... --timeout 120s
+     ```
+
+  2. **Set permanently in config:**
+
+     ```yaml
+     timeout: 120s
+     ```
+
+  3. **Check stream is valid:**
+
+     Some content IDs may be inactive or invalid. Try a different stream.
+
+  4. **Check engine is working:**
+
+     ```bash
+     curl http://localhost:6878/
+     ```
+
+  5. **Check internet connection:**
+
+     Acestream requires good connectivity to peers.
+
+  6. **Wait for peers:**
+
+     Some streams need time to find peers. Be patient and try again.
+</Accordion>
+
+### Connection refused
+
+<Accordion title="Error: connection refused">
+  **Cause:** Can't connect to acestream-engine
+
+  **Solutions:**
+
+  1. **Check engine is running:**
+
+     ```bash
+     ps aux | grep acestreamengine
+     ```
+
+  2. **Check port is correct:**
+
+     ```bash
+     netstat -tlnp | grep 6878
+     ```
+
+  3. **Verify engine responds:**
+
+     ```bash
+     curl http://localhost:6878/
+     ```
+
+  4. **Start engine manually:**
+
+     ```bash
+     acestreamengine --client-console --http-port 6878
+     ```
+
+  5. **Check for port conflicts:**
+
+     If something else is using port 6878:
+
+     ```bash
+     aceplay play acestream://... --engine-port 8080
+     ```
+
+     And start engine on that port:
+
+     ```bash
+     acestreamengine --client-console --http-port 8080
+     ```
+</Accordion>
+
+### Invalid URL
+
+<Accordion title="Error: invalid URL">
+  **Cause:** The acestream URL format is incorrect
+
+  **Solutions:**
+
+  1. **Check URL format:**
+
+     Valid formats:
+     - `acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209`
+     - `94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209` (content ID only)
+
+  2. **URL must be 32-40 hex characters:**
+
+     ```bash
+     # Valid (40 chars)
+     aceplay play acestream://94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+
+     # Invalid (too short)
+     aceplay play acestream://94c2fd8f
+     ```
+
+  3. **Decode URL-encoded links:**
+
+     If you copied from a browser, it might be URL-encoded:
+
+     ```bash
+     # Firefox may encode as
+     acestream%3A%2F%2F94c2fd8fb9bc8f2fc71a2cbe9d4b866f227a0209
+
+     # Aceplay handles this automatically, but ensure it's properly quoted
+     aceplay play "acestream://..."
+     ```
+</Accordion>
+
+### Config file errors
+
+<Accordion title="Error: error reading configuration">
+  **Cause:** Config file has invalid YAML syntax
+
+  **Solutions:**
+
+  1. **Check config file syntax:**
+
+     ```bash
+     cat ~/.config/aceplay/config.yaml
+     ```
+
+  2. **Validate YAML:**
+
+     Common mistakes:
+     - Incorrect indentation (use spaces, not tabs)
+     - Missing colons
+     - Quotes in wrong places
+
+     Valid config:
+
+     ```yaml
+     player: mpv
+     engine:
+       host: localhost
+       port: 6878
+     timeout: 60s
+     hls: false
+     verbose: false
+     ```
+
+  3. **Reset config:**
+
+     Backup and delete the config file:
+
+     ```bash
+     mv ~/.config/aceplay/config.yaml ~/.config/aceplay/config.yaml.backup
+     ```
+
+     Run Aceplay - it will create a new config:
+
+     ```bash
+     aceplay
+     ```
+
+  4. **Use the interactive editor:**
+
+     ```bash
+     aceplay config edit
+     ```
+</Accordion>
+
+### Browser integration not working
+
+<Accordion title="Browser doesn't open acestream:// links">
+  **Cause:** Protocol handler not registered or not recognized
+
+  **Solutions:**
+
+  1. **Re-register protocol:**
+
+     ```bash
+     aceplay install
+     ```
+
+  2. **Restart browser**
+
+     Close and reopen your browser after registering.
+
+  3. **Check desktop file:**
+
+     ```bash
+     cat ~/.local/share/applications/aceplay.desktop
+     ```
+
+     Should contain:
+
+     ```ini
+     MimeType=x-scheme-handler/acestream;
+     ```
+
+  4. **Verify default handler:**
+
+     ```bash
+     xdg-mime query default x-scheme-handler/acestream
+     ```
+
+     Should output: `aceplay.desktop`
+
+  5. **Set as default manually:**
+
+     ```bash
+     xdg-mime default aceplay.desktop x-scheme-handler/acestream
+     ```
+
+  6. **Update desktop database:**
+
+     ```bash
+     update-desktop-database ~/.local/share/applications
+     ```
+
+  7. **For KDE users:**
+
+     ```bash
+     kbuildsycoca5
+     ```
+</Accordion>
+
+### Player issues
+
+<Accordion title="Player opens but no video">
+  **Cause:** Various player-specific issues
+
+  **Solutions:**
+
+  1. **Check stream URL is valid:**
+
+     Enable verbose mode to see the stream URL:
+
+     ```bash
+     aceplay play acestream://... --verbose
+     ```
+
+     Look for a line like:
+
+     ```
+     Starting playback: http://localhost:6878/...
+     ```
+
+  2. **Test URL directly:**
+
+     Copy the stream URL and test in player:
+
+     ```bash
+     mpv "http://localhost:6878/ace/manifest.m3u8?id=..."
+     ```
+
+  3. **Try different player:**
+
+     ```bash
+     aceplay play acestream://... --player vlc
+     ```
+
+  4. **Try HLS mode:**
+
+     ```bash
+     aceplay play acestream://... --hls
+     ```
+
+  5. **Check codec support:**
+
+     Ensure your player supports the stream codec. Install codec packages:
+
+     ```bash
+     # Arch
+     sudo pacman -S ffmpeg
+
+     # Debian/Ubuntu
+     sudo apt install ffmpeg
+     ```
+</Accordion>
+
+## Performance issues
+
+### Buffering/stuttering
+
+<Accordion title="Stream keeps buffering">
+  **Solutions:**
+
+  1. **Increase player cache:**
+
+     For mpv (already has `--cache=yes` by default in Aceplay)
+
+     For VLC (already has `--network-caching=3000` by default)
+
+  2. **Try HLS mode:**
+
+     ```bash
+     aceplay play acestream://... --hls
+     ```
+
+  3. **Check internet speed:**
+
+     Acestream requires good download speed and peer availability.
+
+  4. **Wait for more peers:**
+
+     Watch the stream statistics:
+
+     ```
+     Status: dl | ↓ 1.2 MB/s | ↑ 256 KB/s | Peers: 15
+     ```
+
+     More peers = better performance.
+
+  5. **Check CPU usage:**
+
+     ```bash
+     top
+     ```
+
+     If CPU is maxed out, try a lighter player or lower quality stream.
+</Accordion>
+
+### High latency
+
+<Accordion title="Stream is delayed by 10-20 seconds">
+  **Cause:** Normal for HLS mode or network conditions
+
+  **Solutions:**
+
+  1. **Use direct mode instead of HLS:**
+
+     ```bash
+     aceplay play acestream://... # without --hls
+     ```
+
+  2. **Accept the latency:**
+
+     Acestream P2P protocol has inherent latency. Some delay is normal.
+
+  3. **Reduce player buffering:**
+
+     This is player-dependent and may cause stuttering.
+</Accordion>
+
+## Getting help
+
+If you're still experiencing issues:
+
+1. **Check the logs:**
+
+   Run with verbose mode and save output:
+
+   ```bash
+   aceplay play acestream://... --verbose 2>&1 | tee aceplay.log
+   ```
+
+2. **Verify versions:**
+
+   ```bash
+   aceplay version
+   acestreamengine --version
+   mpv --version
+   ```
+
+3. **Check system:**
+
+   ```bash
+   uname -a
+   cat /etc/os-release
+   ```
+
+4. **File an issue:**
+
+   Visit [github.com/crstian19/aceplay/issues](https://github.com/crstian19/aceplay/issues)
+
+   Include:
+   - Aceplay version
+   - OS and version
+   - Full error message
+   - Steps to reproduce
+   - Verbose log output
+
+## Quick diagnostic checklist
+
+Run through this checklist to diagnose most issues:
+
+- [ ] `acestreamengine` is installed and in PATH
+- [ ] Video player (mpv/vlc/ffplay) is installed
+- [ ] Engine is running: `curl http://localhost:6878/`
+- [ ] Stream URL is valid (40 hex chars)
+- [ ] Config file is valid YAML
+- [ ] No port conflicts on 6878
+- [ ] Firewall allows acestream traffic
+- [ ] Good internet connection
+- [ ] Verbose mode enabled for debugging
+
+## Reference
+
+- Error handling: `cmd/main.go:161-276`
+- Engine detection: `internal/acestream/client.go:146-161`
+- Player validation: `internal/player/player.go:42-56`
+- URL parsing: `pkg/acestream/url.go`

@@ -1,0 +1,377 @@
+---
+title: Player Setup
+description: Configure and customize video player settings for Aceplay
+---
+
+## Overview
+
+Aceplay supports multiple video players for stream playback. Each player comes with optimized default arguments for the best streaming experience.
+
+## Supported Players
+
+The following video players are officially supported (defined in `internal/player/player.go:14-18`):
+
+<CardGroup cols={3}>
+  <Card title="mpv" icon="circle-play">
+    Modern, lightweight media player
+  </Card>
+  <Card title="VLC" icon="traffic-cone">
+    Popular cross-platform media player
+  </Card>
+  <Card title="ffplay" icon="film">
+    Simple player from FFmpeg suite
+  </Card>
+</CardGroup>
+
+## Default Player Arguments
+
+Aceplay automatically configures each player with optimized arguments for streaming. These defaults are defined in `internal/player/player.go:71-93`.
+
+### mpv (Default)
+
+```bash
+mpv --force-window=immediate --cache=yes [stream-url]
+```
+
+<ParamField path="--force-window=immediate" type="flag">
+  Creates the player window immediately, before the stream starts loading.
+</ParamField>
+
+<ParamField path="--cache=yes" type="flag">
+  Enables caching for smoother playback of network streams.
+</ParamField>
+
+### VLC
+
+```bash
+vlc --play-and-exit --network-caching=3000 [stream-url]
+```
+
+<ParamField path="--play-and-exit" type="flag">
+  Automatically closes VLC when playback finishes.
+</ParamField>
+
+<ParamField path="--network-caching=3000" type="integer">
+  Sets network caching to 3000ms (3 seconds) for buffering.
+</ParamField>
+
+### ffplay
+
+```bash
+ffplay -window_title Aceplay -fflags nobuffer -flags low_delay -strict experimental [stream-url]
+```
+
+<ParamField path="-window_title" type="string">
+  Sets the window title to "Aceplay".
+</ParamField>
+
+<ParamField path="-fflags nobuffer" type="flag">
+  Disables buffering for lower latency.
+</ParamField>
+
+<ParamField path="-flags low_delay" type="flag">
+  Enables low-delay mode for reduced latency.
+</ParamField>
+
+<ParamField path="-strict experimental" type="flag">
+  Allows experimental codecs and features.
+</ParamField>
+
+## Selecting a Player
+
+### Using Configuration File
+
+Set your preferred player in `~/.config/aceplay/config.yaml`:
+
+```yaml
+player: mpv  # or vlc, ffplay
+```
+
+### Using Environment Variable
+
+```bash
+export ACEPLAY_PLAYER=vlc
+aceplay play acestream://CONTENT_ID
+```
+
+### Using Command-Line Flag
+
+```bash
+aceplay --player ffplay play acestream://CONTENT_ID
+```
+
+### Interactive Selection
+
+Use the interactive configuration wizard:
+
+```bash
+aceplay config edit
+```
+
+Or on first run, Aceplay will automatically prompt you to select a player from those available on your system.
+
+## Finding Available Players
+
+Aceplay can detect which players are installed on your system.
+
+### Check Available Players
+
+The player detection searches for executables in:
+
+1. System `PATH`
+2. Common installation directories:
+   - `/usr/bin/`
+   - `/usr/local/bin/`
+   - `/opt/[player]/bin/`
+   - `~/.local/bin/`
+
+This logic is implemented in `internal/player/player.go:43-56`.
+
+### Programmatic Check
+
+During first run or when using `aceplay config edit`, Aceplay calls `player.GetAvailablePlayers()` (defined in `internal/player/player.go:102-113`) to detect installed players.
+
+## Installing Video Players
+
+If you don't have a supported player installed, here's how to install them:
+
+### mpv (Recommended)
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install mpv
+```
+
+```bash Fedora
+sudo dnf install mpv
+```
+
+```bash Arch Linux
+sudo pacman -S mpv
+```
+
+```bash macOS
+brew install mpv
+```
+</CodeGroup>
+
+### VLC
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install vlc
+```
+
+```bash Fedora
+sudo dnf install vlc
+```
+
+```bash Arch Linux
+sudo pacman -S vlc
+```
+
+```bash macOS
+brew install --cask vlc
+```
+</CodeGroup>
+
+### ffplay (FFmpeg)
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install ffmpeg
+```
+
+```bash Fedora
+sudo dnf install ffmpeg
+```
+
+```bash Arch Linux
+sudo pacman -S ffmpeg
+```
+
+```bash macOS
+brew install ffmpeg
+```
+</CodeGroup>
+
+## Custom Player Arguments
+
+<Warning>
+  Custom player arguments are currently not configurable through the config file. The default arguments are hardcoded in `internal/player/player.go:71-93`.
+  
+  If you need custom arguments, you would need to modify the source code or use a wrapper script.
+</Warning>
+
+### Wrapper Script Example
+
+Create a custom wrapper script for advanced player customization:
+
+```bash
+#!/bin/bash
+# mpv-custom-wrapper
+
+mpv --force-window=immediate \
+    --cache=yes \
+    --cache-secs=10 \
+    --demuxer-max-bytes=50M \
+    --demuxer-max-back-bytes=20M \
+    "$@"
+```
+
+Make it executable and place it in your PATH:
+
+```bash
+chmod +x mpv-custom-wrapper
+sudo mv mpv-custom-wrapper /usr/local/bin/
+```
+
+Then configure Aceplay to use your wrapper:
+
+```yaml
+player: mpv-custom-wrapper
+```
+
+## Player Configuration Examples
+
+### Minimal Configuration
+
+```yaml
+player: mpv
+```
+
+### With Remote Engine
+
+```yaml
+player: vlc
+engine:
+  host: 192.168.1.100
+  port: 6878
+```
+
+### High-Performance Setup
+
+```yaml
+player: mpv
+timeout: 120s
+connect_timeout: 10s
+hls: false  # Direct streaming for better quality
+engine:
+  host: localhost
+  port: 6878
+  auto_start: true
+```
+
+### HLS Mode
+
+```yaml
+player: vlc
+hls: true
+engine:
+  host: localhost
+  port: 6878
+```
+
+## Player Detection Process
+
+When you select a player, Aceplay performs these steps (see `internal/player/player.go:28-40`):
+
+1. **Create Player Instance**: `NewPlayer(name)` is called
+2. **Find Executable**: Searches PATH and common directories
+3. **Apply Default Args**: Loads optimized arguments for the player
+4. **Return Player**: Returns configured player instance
+
+If the player is not found, an error is returned:
+
+```
+player 'vlc' not found: executable not found
+```
+
+## Troubleshooting
+
+### Player Not Found
+
+If Aceplay can't find your player:
+
+```bash
+# Check if player is in PATH
+which mpv
+which vlc
+which ffplay
+
+# Verify installation
+mpv --version
+vlc --version
+ffplay -version
+```
+
+### Player Doesn't Start
+
+Enable verbose mode to see detailed player startup logs:
+
+```bash
+aceplay --verbose play acestream://CONTENT_ID
+```
+
+### Check Available Players
+
+During configuration, Aceplay will show you which players are available:
+
+```bash
+aceplay config edit
+```
+
+The wizard will only display players that are actually installed and detected on your system.
+
+### Permission Issues
+
+If you have permission issues with the player:
+
+```bash
+# Check player permissions
+ls -l $(which mpv)
+
+# Ensure it's executable
+chmod +x $(which mpv)
+```
+
+## Player Comparison
+
+| Feature | mpv | VLC | ffplay |
+|---------|-----|-----|--------|
+| Default | ✓ | | |
+| Lightweight | ✓ | | ✓ |
+| Feature-rich | ✓ | ✓ | |
+| GUI Controls | ✓ | ✓ | Basic |
+| Keyboard Shortcuts | Extensive | Extensive | Limited |
+| Resource Usage | Low | Medium | Very Low |
+| Recommended For | General use | Feature needs | Minimal setups |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose mpv for best experience" icon="star">
+    mpv is the default player and offers the best balance of features, performance, and streaming optimization.
+  </Accordion>
+
+  <Accordion title="Use VLC if you need advanced controls" icon="sliders">
+    VLC provides extensive GUI controls and is familiar to most users.
+  </Accordion>
+
+  <Accordion title="Use ffplay for headless/minimal systems" icon="server">
+    ffplay is the lightest option and works well in minimal environments.
+  </Accordion>
+
+  <Accordion title="Keep players updated" icon="arrow-up">
+    Regularly update your video player to get the latest codec support and bug fixes.
+  </Accordion>
+</AccordionGroup>
+
+## Related Configuration
+
+- [Configuration File](/configuration/config-file) - Learn about all config options
+- [Environment Variables](/configuration/environment-variables) - Configure via environment
+- CLI Reference - Command-line player options
