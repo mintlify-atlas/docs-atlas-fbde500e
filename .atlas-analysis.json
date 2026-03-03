@@ -1,0 +1,75 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Aceplay",
+  "projectDescription": "Modern Go CLI for playing Ace Stream content with automatic engine management and browser integration",
+  "theme": "aspen",
+  "primaryColor": "#E63946",
+  "lightColor": "#F1FAEE",
+  "darkColor": "#1D3557",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Usage",
+        "pages": [
+          "usage/play-command",
+          "usage/config-command",
+          "usage/interactive-mode"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "configuration/config-file",
+          "configuration/environment-variables",
+          "configuration/player-setup"
+        ]
+      },
+      {
+        "group": "Advanced",
+        "pages": [
+          "advanced/browser-integration",
+          "advanced/hls-mode",
+          "advanced/engine-management",
+          "advanced/troubleshooting"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "development/architecture",
+          "development/building",
+          "development/testing",
+          "development/contributing"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Auto-start acestream-engine",
+    "Browser protocol handler for acestream:// links",
+    "Multiple player support (mpv, vlc, ffplay)",
+    "HLS streaming mode",
+    "Interactive configuration wizard",
+    "Desktop notifications",
+    "Elegant TUI with Charm ecosystem"
+  ],
+  "publicApiSurface": [
+    "aceplay play <url>",
+    "aceplay config",
+    "aceplay config show",
+    "aceplay config set <key> <value>",
+    "aceplay config edit",
+    "aceplay install",
+    "aceplay register-protocol",
+    "aceplay interactive",
+    "aceplay version"
+  ]
+}
